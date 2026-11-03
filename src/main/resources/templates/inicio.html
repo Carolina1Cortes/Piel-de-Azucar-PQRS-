@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>APOLO · Bandeja de PQRS</title>
+    <link rel="stylesheet" th:href="@{/css/apolo.css}">
+</head>
+<body>
+<header>
+    <h1>APOLO</h1>
+    <p>Gestión de PQRS · Piel de Azúcar</p>
+</header>
+<main>
+    <h2>Bandeja de PQRS</h2>
+    <p class="nota">Vista de solo lectura del primer sprint. Ordenada por fecha límite.</p>
+    <div class="tabla-scroll">
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Asunto</th>
+                <th>Clienta</th>
+                <th>Categoría</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Responsable</th>
+                <th>Fecha límite</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${pqrs}">
+                <td th:text="${p.id}">1</td>
+                <td th:text="${p.asunto}">Asunto</td>
+                <td th:text="${p.cliente.nombre}">Clienta</td>
+                <td th:text="${p.tipoConsulta.categoria.etiqueta}">Categoría</td>
+                <td><span class="etiqueta" th:classappend="'prio-' + ${p.prioridad.name().toLowerCase()}" th:text="${p.prioridad.etiqueta}">Media</span></td>
+                <td th:text="${p.estado.etiqueta}">Pendiente</td>
+                <td th:text="${p.responsable != null} ? ${p.responsable.nombre} : '—'">—</td>
+                <td th:text="${#temporals.format(p.fechaLimite, 'dd/MM/yyyy')}">01/01/2026</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(pqrs)}">
+                <td colspan="8">No hay PQRS registradas.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
