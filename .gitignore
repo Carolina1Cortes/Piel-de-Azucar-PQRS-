@@ -1,0 +1,18 @@
+# Maven
+target/
+# Base de datos local (se genera al ejecutar)
+data/
+*.mv.db
+*.trace.db
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+# Sistema operativo
+.DS_Store
+Thumbs.db
+# Secretos locales
+application-local.properties
