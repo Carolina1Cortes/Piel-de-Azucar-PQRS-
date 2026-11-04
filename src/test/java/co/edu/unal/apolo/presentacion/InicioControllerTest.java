@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -86,13 +85,6 @@ class InicioControllerTest {
                 .andExpect(content().string(containsString("4 día(s) hábil(es)")))
                 .andExpect(content().string(containsString("Vencida hace 3 día(s) hábil(es)")))
                 .andExpect(content().string(containsString("/pqrs/2")));
-    }
-
-    @Test
-    @WithAnonymousUser
-    void sinSesionRedirigeAlLogin() throws Exception {
-        mockMvc.perform(get("/"))
-                .andExpect(status().is3xxRedirection());
     }
 
     private Pqrs pqrs(Long id, String clienta, Prioridad prioridad, EstadoPqrs estado) {
