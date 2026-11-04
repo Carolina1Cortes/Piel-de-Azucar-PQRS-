@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>APOLO · Caso</title>
+    <link rel="stylesheet" th:href="@{/css/apolo.css}">
+</head>
+<body>
+<header th:replace="~{fragmentos :: cabecera(${usuario})}"></header>
+<main>
+    <p><a th:href="@{/}">← Volver a la bandeja</a></p>
+
+    <div class="mensaje ok" th:if="${mensajeOk}" th:text="${mensajeOk}">Listo</div>
+    <div class="mensaje error" th:if="${mensajeError}" th:text="${mensajeError}">Error</div>
+
+    <h2>Caso #<span th:text="${caso.pqrs().id}">1</span> · <span th:text="${caso.pqrs().asunto}">Asunto</span></h2>
+
+    <div class="banner-critico" th:if="${caso.criticoSinAsignar()}">
+        <strong>Automatización pausada.</strong>
+        Este es un caso crítico y nadie lo ha tomado. No se enviará ninguna respuesta automática:
+        toma el caso para poder responder a la clienta.
+    </div>
+
+    <dl class="datos">
+        <dt>Clienta</dt>
+        <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Clienta</dd>
+        <dt>Categoría</dt>
+        <dd th:text="${caso.pqrs().tipoConsulta.categoria.etiqueta} + ' · ' + ${caso.pqrs().tipoConsulta.descripcion}">Categoría</dd>
+        <dt>Prioridad</dt>
+        <dd><span class="etiqueta" th:classappend="'prio-' + ${caso.pqrs().prioridad.name().toLowerCase()}" th:text="${caso.pqrs().prioridad.etiqueta}">Media</span></dd>
+        <dt>Estado</dt>
+        <dd th:text="${caso.pqrs().estado.etiqueta}">Pendiente</dd>
+        <dt>Responsable</dt>
+        <dd th:text="${caso.pqrs().responsable != null} ? ${caso.pqrs().responsable.nombre} : 'Sin asignar'">Sin asignar</dd>
+        <dt>Canal</dt>
+        <dd th:text="${caso.pqrs().canal.etiqueta}">Gmail</dd>
+        <dt>Fecha límite</dt>
+        <dd>
+            <span th:text="${#temporals.format(caso.pqrs().fechaLimite, 'dd/MM/yyyy')}">01/01/2026</span>
+            <small class="plazo" th:if="${caso.pqrs().estado.name() == 'RESUELTA'}">Resuelta</small>
+            <small class="plazo vencida" th:if="${caso.pqrs().estado.name() != 'RESUELTA' and caso.diasHabilesRestantes() lt 0}"
+                   th:text="'Vencida hace ' + ${-caso.diasHabilesRestantes()} + ' día(s) hábil(es)'">Vencida</small>
+            <small class="plazo" th:if="${caso.pqrs().estado.name() != 'RESUELTA' and caso.diasHabilesRestantes() ge 0}"
+                   th:text="${caso.diasHabilesRestantes()} + ' día(s) hábil(es)'">5 días</small>
+        </dd>
+    </dl>
+
+    <form th:if="${caso.puedeTomar()}" th:action="@{/pqrs/{id}/tomar(id=${caso.pqrs().id})}" method="post">
+        <button class="boton" type="submit">Tomar caso</button>
+    </form>
+
+    <h3>Conversación</h3>
+    <div class="burbuja" th:each="m : ${caso.mensajes()}"
+         th:classappend="${m.direccion().name() == 'ENTRANTE'} ? 'entrante' : 'saliente'">
+        <div class="burbuja-cabecera">
+            <strong th:text="${m.direccion().etiqueta}">Entrante</strong>
+            <span th:text="${#temporals.format(m.fecha(), 'dd/MM/yyyy HH:mm')}">01/01/2026 09:00</span>
+            <span th:if="${m.autor() != null}" th:text="'· ' + ${m.autor()}">· Operador</span>
+            <span th:if="${m.automatico()}">· Automático</span>
+        </div>
+        <div class="burbuja-asunto" th:if="${m.asunto() != null}" th:text="${m.asunto()}">Asunto</div>
+        <p th:text="${m.cuerpo()}">Texto del mensaje</p>
+    </div>
+    <p class="nota" th:if="${#lists.isEmpty(caso.mensajes())}">Todavía no hay mensajes.</p>
+
+    <h3>Responder a la clienta</h3>
+    <p class="nota" th:if="${!caso.puedeResponder()}" th:text="${caso.motivoRespuestaBloqueada()}">Motivo</p>
+    <form th:action="@{/pqrs/{id}/responder(id=${caso.pqrs().id})}" th:object="${formulario}" method="post" class="formulario">
+        <label for="asunto">Asunto (opcional)</label>
+        <input id="asunto" type="text" th:field="*{asunto}" th:disabled="${!caso.puedeResponder()}">
+
+        <label for="cuerpo">Mensaje</label>
+        <textarea id="cuerpo" rows="6" th:field="*{cuerpo}" th:disabled="${!caso.puedeResponder()}"></textarea>
+        <p class="error-campo" th:if="${#fields.hasErrors('cuerpo')}" th:errors="*{cuerpo}">Error</p>
+        <p class="error-campo" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}">Error</p>
+
+        <button class="boton" type="submit" th:disabled="${!caso.puedeResponder()}">Enviar respuesta</button>
+    </form>
+
+    <h3>Bitácora</h3>
+    <div class="tabla-scroll">
+        <table>
+            <thead>
+            <tr><th>Fecha</th><th>Acción</th><th>Usuario</th><th>Detalle</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${caso.bitacora()}">
+                <td th:text="${#temporals.format(r.fecha(), 'dd/MM/yyyy HH:mm')}">01/01/2026 09:00</td>
+                <td th:text="${r.accion().etiqueta}">Caso tomado</td>
+                <td th:text="${r.usuario() != null} ? ${r.usuario()} : 'Sistema'">Operador</td>
+                <td th:text="${r.motivo() != null} ? ${r.motivo()} : (${r.notas() != null} ? ${r.notas()} : '—')">—</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(caso.bitacora())}">
+                <td colspan="4">Sin registros todavía.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

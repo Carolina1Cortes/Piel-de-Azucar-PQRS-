@@ -7,7 +7,8 @@
 
 MERGE INTO usuario (id, nombre, correo, contrasena_hash, rol, bloqueado) KEY (id) VALUES
     (1, 'Paula Andrea Mesa González', 'paula@pieldeazucar.co', '$2a$10$8z9CY/HHwdPe6jMTuMIc7OYaH46lYEQrfl1eKo3uVN3gB2HkvTpKO', 'ADMIN', FALSE),
-    (2, 'Operador Uno', 'operador1@pieldeazucar.co', '$2a$10$8z9CY/HHwdPe6jMTuMIc7OYaH46lYEQrfl1eKo3uVN3gB2HkvTpKO', 'OPERADOR', FALSE);
+    (2, 'Operador Uno', 'operador1@pieldeazucar.co', '$2a$10$8z9CY/HHwdPe6jMTuMIc7OYaH46lYEQrfl1eKo3uVN3gB2HkvTpKO', 'OPERADOR', FALSE),
+    (3, 'Operador Bloqueado', 'operador2@pieldeazucar.co', '$2a$10$8z9CY/HHwdPe6jMTuMIc7OYaH46lYEQrfl1eKo3uVN3gB2HkvTpKO', 'OPERADOR', TRUE);
 
 MERGE INTO cliente (id, nombre, correo, telefono) KEY (id) VALUES
     (1, 'Camila Rojas', 'camila.rojas@example.com', '3001112233'),

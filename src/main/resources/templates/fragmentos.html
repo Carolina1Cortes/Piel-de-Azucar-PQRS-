@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Fragmentos de APOLO</title>
+</head>
+<body>
+<header class="cabecera" th:fragment="cabecera(usuario)">
+    <div>
+        <h1><a th:href="@{/}">APOLO</a></h1>
+        <p>Gestión de PQRS · Piel de Azúcar</p>
+    </div>
+    <form th:action="@{/logout}" method="post" class="sesion">
+        <span th:text="${usuario}">operador@pieldeazucar.co</span>
+        <button type="submit" class="boton secundario">Cerrar sesión</button>
+    </form>
+</header>
+</body>
+</html>

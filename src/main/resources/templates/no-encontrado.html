@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>APOLO · No encontrado</title>
+    <link rel="stylesheet" th:href="@{/css/apolo.css}">
+</head>
+<body>
+<main>
+    <h2>No encontrado</h2>
+    <p th:text="${mensaje}">El recurso no existe.</p>
+    <p><a th:href="@{/}">← Volver a la bandeja</a></p>
+</main>
+</body>
+</html>

@@ -43,16 +43,22 @@ class RepositoriosTest {
     @Test
     void losDatosDePruebaSeCargan() {
         assertThat(clienteRepository.count()).isGreaterThanOrEqualTo(5);
-        assertThat(usuarioRepository.count()).isEqualTo(2);
+        assertThat(usuarioRepository.count()).isEqualTo(3);
         assertThat(tipoConsultaRepository.count()).isGreaterThanOrEqualTo(8);
         assertThat(pqrsRepository.count()).isGreaterThanOrEqualTo(8);
     }
 
     @Test
-    void hayUnAdminYUnOperador() {
+    void hayUnAdminYDosOperadores() {
         assertThat(usuarioRepository.findByRol(Rol.ADMIN)).hasSize(1);
-        assertThat(usuarioRepository.findByRol(Rol.OPERADOR)).hasSize(1);
+        assertThat(usuarioRepository.findByRol(Rol.OPERADOR)).hasSize(2);
         assertThat(usuarioRepository.findByCorreo("paula@pieldeazucar.co")).isPresent();
+    }
+
+    @Test
+    void unOperadorDePruebaEstaBloqueadoYElOtroNo() {
+        assertThat(usuarioRepository.findByCorreo("operador1@pieldeazucar.co").orElseThrow().isBloqueado()).isFalse();
+        assertThat(usuarioRepository.findByCorreo("operador2@pieldeazucar.co").orElseThrow().isBloqueado()).isTrue();
     }
 
     @Test
@@ -103,6 +109,22 @@ class RepositoriosTest {
         assertThat(todas.get(0).getIdExterno()).isEqualTo("gmail-msg-007");
         assertThat(todas).extracting(Pqrs::getFechaLimite).isSorted();
         assertThat(todas.get(0).getCliente().getNombre()).isNotBlank();
+    }
+
+    @Test
+    void cargaUnaPqrsConSuDetalleParaLaVista() {
+        Pqrs critica = pqrsRepository.findByIdConDetalle(2L).orElseThrow();
+        assertThat(critica.getCliente().getNombre()).isEqualTo("Valentina Ortiz");
+        assertThat(critica.getTipoConsulta().getCategoria()).isEqualTo(Categoria.REACCIONES);
+        assertThat(critica.getResponsable()).isNull();
+        assertThat(pqrsRepository.findByIdConDetalle(999L)).isEmpty();
+    }
+
+    @Test
+    void listaSoloLasCriticasConDetalle() {
+        List<Pqrs> criticas = pqrsRepository.findByPrioridadConDetalle(Prioridad.CRITICA);
+        assertThat(criticas).extracting(Pqrs::getIdExterno).containsExactly("gmail-msg-002");
+        assertThat(criticas.get(0).getCliente().getNombre()).isNotBlank();
     }
 
     @Test

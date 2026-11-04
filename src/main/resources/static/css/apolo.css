@@ -13,3 +13,67 @@ th { font-weight:600; background:#f4f1f6; }
 .etiqueta { padding:.15rem .5rem; border-radius:10px; font-size:.78rem; }
 .prio-baja { background:#e8f3ea; } .prio-media { background:#fff4d6; }
 .prio-alta { background:#ffe3cc; } .prio-critica { background:#f8d4d4; font-weight:600; }
+
+/* --- Cabecera con sesión --- */
+.cabecera { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+.cabecera h1 a { color:inherit; text-decoration:none; }
+.sesion { display:flex; align-items:center; gap:.6rem; font-size:.85rem; color:#555; }
+a { color:var(--acento); }
+
+/* --- Botones y filtros --- */
+.boton { display:inline-block; padding:.5rem 1rem; border:0; border-radius:6px; background:var(--acento); color:#fff;
+         font-size:.9rem; cursor:pointer; text-decoration:none; }
+.boton.secundario { background:#fff; color:var(--acento); border:1px solid var(--acento); }
+.boton:disabled { background:#cfc7d6; cursor:not-allowed; }
+.filtros { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin:1rem 0; }
+.filtros a:not(.boton) { padding:.35rem .9rem; border:1px solid var(--linea); border-radius:16px; background:#fff;
+                         color:var(--texto); text-decoration:none; font-size:.88rem; }
+.filtros a.activo { background:var(--acento); border-color:var(--acento); color:#fff; }
+.filtros .boton { margin-left:auto; }
+
+/* --- Plazo en días hábiles --- */
+.plazo { display:block; color:#777; font-size:.75rem; }
+.plazo.vencida { color:#b3261e; font-weight:600; }
+
+/* --- Mensajes y avisos --- */
+.mensaje { padding:.7rem 1rem; border-radius:6px; margin:1rem 0; font-size:.9rem; }
+.mensaje.ok { background:#e8f3ea; border:1px solid #bfe0c5; }
+.mensaje.error { background:#fbe4e2; border:1px solid #f0b8b3; }
+.banner-critico { padding:.9rem 1rem; border-radius:6px; margin:1rem 0; background:#f8d4d4; border:1px solid #e59a9a;
+                  border-left:6px solid #b3261e; }
+.error-campo { color:#b3261e; font-size:.82rem; margin:.2rem 0 0; }
+
+/* --- Datos del caso --- */
+.datos { display:grid; grid-template-columns:max-content 1fr; gap:.4rem 1.2rem; background:#fff;
+         border:1px solid var(--linea); border-radius:6px; padding:1rem; margin:1rem 0; }
+.datos dt { font-weight:600; color:#555; }
+.datos dd { margin:0; }
+
+/* --- Conversación --- */
+.burbuja { background:#fff; border:1px solid var(--linea); border-radius:8px; padding:.7rem 1rem; margin:.6rem 0; max-width:760px; }
+.burbuja.saliente { margin-left:auto; background:#f4f1f6; }
+.burbuja-cabecera { font-size:.8rem; color:#666; display:flex; gap:.5rem; flex-wrap:wrap; }
+.burbuja-asunto { font-weight:600; margin-top:.3rem; }
+.burbuja p { margin:.4rem 0 0; white-space:pre-wrap; }
+
+/* --- Formularios --- */
+.formulario { display:flex; flex-direction:column; gap:.4rem; max-width:760px; margin:.6rem 0 1.5rem; }
+.formulario label { font-weight:600; font-size:.88rem; margin-top:.6rem; }
+input[type=text], input[type=email], input[type=password], select, textarea {
+    width:100%; padding:.55rem .7rem; border:1px solid #cfcfcf; border-radius:6px; font:inherit; background:#fff; }
+textarea:disabled, input:disabled { background:#eee; color:#888; cursor:not-allowed; }
+.formulario .boton { align-self:flex-start; margin-top:.8rem; }
+
+/* --- Inicio de sesión --- */
+.pagina-login { display:flex; min-height:100vh; align-items:center; justify-content:center; }
+.tarjeta-login { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:2rem; width:min(380px, 92vw); }
+.tarjeta-login h1 { margin:0; letter-spacing:.15em; color:var(--acento); text-align:center; }
+.tarjeta-login .nota { text-align:center; }
+.tarjeta-login form { display:flex; flex-direction:column; gap:.4rem; margin-top:1rem; }
+.tarjeta-login label { font-weight:600; font-size:.88rem; margin-top:.5rem; }
+.tarjeta-login .boton { margin-top:1rem; }
+
+@media (max-width:600px) {
+    .datos { grid-template-columns:1fr; }
+    .burbuja.saliente { margin-left:0; }
+}
