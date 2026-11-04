@@ -6,7 +6,7 @@ Aplicación web para gestionar las PQRS (peticiones, quejas, reclamos y sugerenc
 - **Docente:** Santiago Leonardo Delgado Mejía
 - **Equipo Apolo:** Linda Carolina Cortes Bustos, Antonio Garay Pinzón, Angel David Baez Camargo, Jorshua Leandro Coronado Romero, Sebastian David Perez Perez
 
-## Estado actual: Sprint 1 (Incremento 1, revisión 04/11/2026)
+## Estado actual: Sprint 1
 
 Objetivo del incremento: un operador autenticado puede abrir un caso crítico, tomarlo y enviar una respuesta personalizada, y cada acción queda en la bitácora. Todo funciona sin servicios externos, con el canal simulado.
 
@@ -44,11 +44,17 @@ java -jar target/apolo-0.1.0-SNAPSHOT.jar
 ## Pruebas
 
 ```bash
-./mvnw test       # corre todas las pruebas (sin internet)
+./mvnw test       # corre todas las pruebas
 ./mvnw verify     # además exige 80 % de cobertura de líneas en el paquete servicios
 ```
 
-El informe de cobertura queda en `target/site/jacoco/index.html`.
+La suite contempla pruebas de la lógica de negocio, controladores, persistencia, autenticación, autorización y del flujo de atención de casos. En particular:
+
+- `SeguridadIntegracionTest` verifica que las pantallas protegidas redirijan al login cuando no hay sesión, que las credenciales válidas permitan ingresar y que un operador bloqueado no pueda autenticarse.
+- `InicioControllerTest` verifica la bandeja, el filtro de casos críticos y la presentación de los plazos en días hábiles.
+- Las pruebas de servicios verifican las reglas para tomar casos, enviar respuestas y registrar las acciones en la bitácora.
+
+El informe de cobertura queda en `target/site/jacoco/index.html`. La verificación de JaCoCo exige al menos un 80 % de cobertura de líneas en el paquete `servicios`.
 
 ## Arquitectura por capas
 
@@ -59,7 +65,7 @@ co.edu.unal.apolo
 ├── integracion     CanalMensajeria: Gmail real o canal simulado
 ├── persistencia    Repositorios Spring Data sobre H2
 ├── dominio         Entidades y enumeraciones (usadas por todas las capas)
-├── seguridad       (transversal) login, roles y bloqueo, con Spring Security (ya implementado)
+├── seguridad       (transversal) login, roles y bloqueo, con Spring Security
 └── configuracion   Beans y propiedades
 ```
 
