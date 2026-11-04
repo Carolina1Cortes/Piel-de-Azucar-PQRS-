@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>APOLO · Simular correo</title>
+    <link rel="stylesheet" th:href="@{/css/apolo.css}">
+</head>
+<body>
+<header th:replace="~{fragmentos :: cabecera(${usuario})}"></header>
+<main>
+    <p><a th:href="@{/}">← Volver a la bandeja</a></p>
+    <h2>Simular correo entrante</h2>
+    <p class="nota">Crea una PQRS como si hubiera llegado un correo por Gmail. No usa internet. La prioridad y el plazo
+        (15 días hábiles) salen del tipo de consulta elegido.</p>
+
+    <form th:action="@{/simulador}" th:object="${formulario}" method="post" class="formulario">
+        <div class="mensaje error" th:if="${#fields.hasGlobalErrors()}" th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
+
+        <label for="nombre">Nombre de la clienta</label>
+        <input id="nombre" type="text" th:field="*{nombre}">
+        <p class="error-campo" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">Error</p>
+
+        <label for="correo">Correo de la clienta</label>
+        <input id="correo" type="email" th:field="*{correo}">
+        <p class="error-campo" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}">Error</p>
+
+        <label for="tipoConsultaId">Tipo de consulta</label>
+        <select id="tipoConsultaId" th:field="*{tipoConsultaId}">
+            <option value="">Elige un tipo…</option>
+            <option th:each="t : ${tipos}" th:value="${t.id}"
+                    th:text="${t.categoria.etiqueta} + ' — ' + ${t.descripcion} + ' (' + ${t.prioridadPorDefecto.etiqueta} + ')'">Tipo</option>
+        </select>
+        <p class="error-campo" th:if="${#fields.hasErrors('tipoConsultaId')}" th:errors="*{tipoConsultaId}">Error</p>
+
+        <label for="asunto">Asunto</label>
+        <input id="asunto" type="text" th:field="*{asunto}">
+        <p class="error-campo" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}">Error</p>
+
+        <label for="cuerpo">Mensaje</label>
+        <textarea id="cuerpo" rows="6" th:field="*{cuerpo}"></textarea>
+        <p class="error-campo" th:if="${#fields.hasErrors('cuerpo')}" th:errors="*{cuerpo}">Error</p>
+
+        <button class="boton" type="submit">Recibir correo</button>
+    </form>
+</main>
+</body>
+</html>

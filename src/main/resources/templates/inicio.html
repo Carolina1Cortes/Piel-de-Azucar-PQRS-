@@ -7,18 +7,25 @@
     <link rel="stylesheet" th:href="@{/css/apolo.css}">
 </head>
 <body>
-<header>
-    <h1>APOLO</h1>
-    <p>Gestión de PQRS · Piel de Azúcar</p>
-</header>
+<header th:replace="~{fragmentos :: cabecera(${usuario})}"></header>
 <main>
+    <div class="mensaje ok" th:if="${mensajeOk}" th:text="${mensajeOk}">Listo</div>
+    <div class="mensaje error" th:if="${mensajeError}" th:text="${mensajeError}">Error</div>
+
     <h2>Bandeja de PQRS</h2>
-    <p class="nota">Vista de solo lectura del primer sprint. Ordenada por fecha límite.</p>
+    <p class="nota">Ordenada por fecha límite. El plazo se cuenta en días hábiles (sin fines de semana ni festivos).</p>
+
+    <nav class="filtros">
+        <a th:href="@{/(filtro='todos')}" th:classappend="${filtro == 'todos'} ? 'activo'">Todos</a>
+        <a th:href="@{/(filtro='criticos')}" th:classappend="${filtro == 'criticos'} ? 'activo'">Críticos</a>
+        <a class="boton" th:href="@{/simulador}">Simular correo entrante</a>
+    </nav>
+
     <div class="tabla-scroll">
         <table>
             <thead>
             <tr>
-                <th>#</th>
+                <th>ID</th>
                 <th>Asunto</th>
                 <th>Clienta</th>
                 <th>Categoría</th>
@@ -29,18 +36,25 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="p : ${pqrs}">
-                <td th:text="${p.id}">1</td>
-                <td th:text="${p.asunto}">Asunto</td>
-                <td th:text="${p.cliente.nombre}">Clienta</td>
-                <td th:text="${p.tipoConsulta.categoria.etiqueta}">Categoría</td>
-                <td><span class="etiqueta" th:classappend="'prio-' + ${p.prioridad.name().toLowerCase()}" th:text="${p.prioridad.etiqueta}">Media</span></td>
-                <td th:text="${p.estado.etiqueta}">Pendiente</td>
-                <td th:text="${p.responsable != null} ? ${p.responsable.nombre} : '—'">—</td>
-                <td th:text="${#temporals.format(p.fechaLimite, 'dd/MM/yyyy')}">01/01/2026</td>
+            <tr th:each="r : ${pqrs}">
+                <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().id}">1</a></td>
+                <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().asunto}">Asunto</a></td>
+                <td th:text="${r.pqrs().cliente.nombre}">Clienta</td>
+                <td th:text="${r.pqrs().tipoConsulta.categoria.etiqueta}">Categoría</td>
+                <td><span class="etiqueta" th:classappend="'prio-' + ${r.pqrs().prioridad.name().toLowerCase()}" th:text="${r.pqrs().prioridad.etiqueta}">Media</span></td>
+                <td th:text="${r.pqrs().estado.etiqueta}">Pendiente</td>
+                <td th:text="${r.pqrs().responsable != null} ? ${r.pqrs().responsable.nombre} : '—'">—</td>
+                <td>
+                    <span th:text="${#temporals.format(r.pqrs().fechaLimite, 'dd/MM/yyyy')}">01/01/2026</span>
+                    <small class="plazo" th:if="${r.pqrs().estado.name() == 'RESUELTA'}">Resuelta</small>
+                    <small class="plazo vencida" th:if="${r.pqrs().estado.name() != 'RESUELTA' and r.vencida()}"
+                           th:text="'Vencida hace ' + ${r.diasAbsolutos()} + ' día(s) hábil(es)'">Vencida</small>
+                    <small class="plazo" th:if="${r.pqrs().estado.name() != 'RESUELTA' and !r.vencida()}"
+                           th:text="${r.diasAbsolutos()} + ' día(s) hábil(es)'">5 días</small>
+                </td>
             </tr>
             <tr th:if="${#lists.isEmpty(pqrs)}">
-                <td colspan="8">No hay PQRS registradas.</td>
+                <td colspan="8">No hay PQRS para este filtro.</td>
             </tr>
             </tbody>
         </table>

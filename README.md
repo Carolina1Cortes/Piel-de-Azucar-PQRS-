@@ -6,9 +6,20 @@ Aplicación web para gestionar las PQRS (peticiones, quejas, reclamos y sugerenc
 - **Docente:** Santiago Leonardo Delgado Mejía
 - **Equipo Apolo:** Linda Carolina Cortes Bustos, Antonio Garay Pinzón, Angel David Baez Camargo, Jorshua Leandro Coronado Romero, Sebastian David Perez Perez
 
-## Estado actual: Sprint 1 (Entrega 4)
+## Estado actual: Sprint 1 (Incremento 1, revisión 04/11/2026)
 
-Proyecto base funcionando: monolito Spring Boot, base de datos H2 con el esquema versionado, estructura por capas, capa de acceso a datos completa y una bandeja de solo lectura para ver los datos de prueba. Todavía **no** hay inicio de sesión, ni reglas de negocio, ni conexión real con Gmail (ver `docs/BACKLOG_SPRINT_1.md` y la sección "Qué sigue").
+Objetivo del incremento: un operador autenticado puede abrir un caso crítico, tomarlo y enviar una respuesta personalizada, y cada acción queda en la bitácora. Todo funciona sin servicios externos, con el canal simulado.
+
+Ya funciona:
+
+- **Inicio de sesión** con roles Operador y Admin (Spring Security + BCrypt). Sin sesión no se entra a ninguna pantalla; un operador bloqueado no puede ingresar.
+- **Entrada simulada de correos** (`/simulador`): crea una PQRS con su clienta, su mensaje entrante, canal Gmail, prioridad según el tipo de consulta y fecha límite a 15 días hábiles.
+- **Bandeja** con filtro Todos / Críticos y plazo en días hábiles (sin fines de semana ni festivos de la tabla `festivo`).
+- **Caso crítico sin asignar:** banner "Automatización pausada" y caja de respuesta bloqueada.
+- **Tomar caso:** autoasignación, estado "En atención", desbloqueo del envío y registro en bitácora.
+- **Enviar respuesta manual** por `CanalSimulado`, guardada en la conversación y registrada en bitácora.
+
+Todavía **no** hay `GmailCanal` real, ni sugerencia de plantillas por palabras clave (extras del sprint), ni escalar, delegar o administrar (siguiente incremento). Ver `docs/BACKLOG_SPRINT_1.md` y la sección "Qué sigue".
 
 ## Requisitos
 
@@ -48,7 +59,7 @@ co.edu.unal.apolo
 ├── integracion     CanalMensajeria: Gmail real o canal simulado
 ├── persistencia    Repositorios Spring Data sobre H2
 ├── dominio         Entidades y enumeraciones (usadas por todas las capas)
-├── seguridad       (transversal) login, roles y bloqueo, con Spring Security
+├── seguridad       (transversal) login, roles y bloqueo, con Spring Security (ya implementado)
 └── configuracion   Beans y propiedades
 ```
 
@@ -69,8 +80,16 @@ Regla de dependencias: `presentacion → servicios → (integracion, persistenci
 |---|---|---|
 | Admin | `paula@pieldeazucar.co` | `apolo2026` |
 | Operador | `operador1@pieldeazucar.co` | `apolo2026` |
+| Operador **bloqueado** | `operador2@pieldeazucar.co` | `apolo2026` (no puede ingresar; sirve para mostrar el bloqueo) |
 
-(Aún no se usan: el inicio de sesión llega en un sprint posterior.)
+### Guion corto para la demostración
+
+1. Abrir <http://localhost:8080>: redirige al login. Probar `operador2@...` (bloqueado) y ver que no ingresa.
+2. Ingresar con `operador1@pieldeazucar.co`. En la bandeja, filtrar por **Críticos** (caso #2).
+3. Abrir el caso #2: banner "Automatización pausada" y envío bloqueado.
+4. **Tomar caso**: pasa a "En atención", queda el operador como responsable y aparece en la bitácora.
+5. Escribir y enviar la respuesta: queda en la conversación y en la bitácora (el envío sale en el log como `[CANAL SIMULADO]`).
+6. Opcional: **Simular correo entrante** con un tipo de "Reacciones" para crear un caso crítico nuevo.
 
 ## Configuración de Gmail
 
