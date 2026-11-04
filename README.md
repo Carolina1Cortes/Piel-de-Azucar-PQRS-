@@ -237,6 +237,7 @@ Consultar [`CONVENCIONES.md`](CONVENCIONES.md).
 
 ## Declaración del uso de inteligencia artificial
 
-El andamiaje inicial de este sprint (estructura del proyecto, `pom.xml`, entidades, repositorios, `schema.sql`, `data.sql`, pruebas y documentación) fue generado con la asistencia de **Claude (Anthropic)** a partir del documento de contexto del proyecto. Los datos de `tipo_consulta` y el calendario de festivos son reconstrucciones provisionales que el equipo debe contrastar con la tabla de clasificación oficial y con el calendario de Colombia. El equipo es responsable de revisar, entender y ajustar todo el código entregado.
-
-El equipo debe completar esta declaración indicando con precisión qué partes revisó, modificó o desarrolló cada integrante y qué herramientas de inteligencia artificial utilizó durante el incremento. La declaración debe reflejar el trabajo realizado realmente.
+Durante el Sprint 1 el equipo usó **Claude (Anthropic)** como herramienta de apoyo. Se utilizó para generar el andamiaje inicial a partir del documento de contexto del proyecto: estructura de paquetes, `pom.xml`, entidades, repositorios, `schema.sql`, `data.sql`, pruebas y borradores de la documentación.
+ 
+Todo el código fue revisado, ejecutado y ajustado por el equipo, que responde por él. Los datos de `tipo_consulta` y el calendario de festivos son reconstrucciones provisionales que deben contrastarse con la tabla oficial de clasificación y con el calendario de Colombia.
+ 
