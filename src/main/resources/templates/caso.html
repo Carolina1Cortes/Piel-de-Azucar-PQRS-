@@ -23,6 +23,8 @@
     </div>
 
     <dl class="datos">
+        <dt>Radicado</dt>
+        <dd th:text="${caso.pqrs().radicado != null} ? ${caso.pqrs().radicado} : '—'">—</dd>
         <dt>Clienta</dt>
         <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Clienta</dd>
         <dt>Categoría</dt>
@@ -49,6 +51,23 @@
     <form th:if="${caso.puedeTomar()}" th:action="@{/pqrs/{id}/tomar(id=${caso.pqrs().id})}" method="post">
         <button class="boton" type="submit">Tomar caso</button>
     </form>
+
+    <th:block th:if="${!#lists.isEmpty(caso.protocolo())}">
+        <h3>Protocolo crítico</h3>
+        <ul class="protocolo">
+            <li th:each="p : ${caso.protocolo()}">
+                <span th:if="${p.completado()}"
+                      th:text="'✔ ' + ${p.paso().etiqueta} + ' · ' + ${p.usuario() != null ? p.usuario() : 'Sistema'} + ' · ' + ${#temporals.format(p.fecha(), 'dd/MM/yyyy HH:mm')}">✔ Paso</span>
+                <th:block th:unless="${p.completado()}">
+                    <span th:text="${p.paso().etiqueta}">Paso</span>
+                    <form th:action="@{/pqrs/{id}/protocolo/{paso}(id=${caso.pqrs().id},paso=${p.paso().name()})}" method="post">
+                        <button class="boton" type="submit" th:disabled="${!caso.puedeCompletarPasos()}">Marcar completado</button>
+                    </form>
+                </th:block>
+            </li>
+        </ul>
+        <p class="nota" th:if="${!caso.puedeCompletarPasos() and caso.pqrs().estado.name() != 'RESUELTA'}">Toma el caso para completar los pasos.</p>
+    </th:block>
 
     <h3>Conversación</h3>
     <div class="burbuja" th:each="m : ${caso.mensajes()}"

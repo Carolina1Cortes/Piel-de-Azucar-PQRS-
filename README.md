@@ -192,6 +192,8 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 | Toma y autoasignación de casos | Implementada |
 | Respuesta mediante canal simulado | Implementada |
 | Registro de acciones en bitácora | Implementado |
+| Radicado y confirmación de recepción | Implementada |
+| Lista de chequeo del protocolo crítico | Implementada |
 | Clasificación automática por palabras clave | Pendiente |
 | Sugerencia de plantillas por palabras clave | Pendiente |
 | Envío real mediante Gmail (`GmailCanal`) | Pendiente |

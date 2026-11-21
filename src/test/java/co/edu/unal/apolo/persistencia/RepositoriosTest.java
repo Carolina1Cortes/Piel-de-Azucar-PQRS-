@@ -87,6 +87,14 @@ class RepositoriosTest {
     }
 
     @Test
+    void losCasosDePruebaTienenRadicadoUnico() {
+        List<String> radicados = pqrsRepository.findAllById(List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L)).stream()
+                .map(Pqrs::getRadicado)
+                .toList();
+        assertThat(radicados).hasSize(8).doesNotContainNull().doesNotHaveDuplicates();
+    }
+
+    @Test
     void filtraPorEstadoYPrioridad() {
         assertThat(pqrsRepository.findByEstado(EstadoPqrs.RESUELTA)).hasSize(2);
         assertThat(pqrsRepository.findByPrioridad(Prioridad.CRITICA))

@@ -1,6 +1,7 @@
 package co.edu.unal.apolo.persistencia;
 
 import co.edu.unal.apolo.dominio.RegistroBitacora;
+import co.edu.unal.apolo.dominio.TipoAccion;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,6 @@ public interface BitacoraRepository extends JpaRepository<RegistroBitacora, Long
     List<RegistroBitacora> findByPqrsIdOrderByFechaAsc(Long pqrsId);
 
     List<RegistroBitacora> findByUsuarioId(Long usuarioId);
+
+    List<RegistroBitacora> findByPqrsIdAndAccionOrderByFechaAsc(Long pqrsId, TipoAccion accion);
 }

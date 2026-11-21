@@ -25,6 +25,9 @@ public class Pqrs {
     @Column(nullable = true, length = 255)
     private String idExterno;
 
+    @Column(nullable = true, length = 30)
+    private String radicado;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Canal canal;
@@ -82,6 +85,14 @@ public class Pqrs {
 
     public void setIdExterno(String idExterno) {
         this.idExterno = idExterno;
+    }
+
+    public String getRadicado() {
+        return radicado;
+    }
+
+    public void setRadicado(String radicado) {
+        this.radicado = radicado;
     }
 
     public Canal getCanal() {

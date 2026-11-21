@@ -26,7 +26,8 @@ import co.edu.unal.apolo.persistencia.MensajeRepository;
 
 /**
  * Recorre con el contexto completo (login, capas, H2 y canal simulado) el objetivo del incremento:
- * un operador autenticado abre un caso crítico, lo toma y envía una respuesta, y todo queda en la bitácora.
+ * un operador autenticado abre un caso crítico, lo toma, envía una respuesta y completa un paso del protocolo,
+ * y todo queda en la bitácora.
  * Usa su propia base en memoria porque modifica los datos semilla.
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:apolo-flujo;DB_CLOSE_DELAY=-1")
@@ -88,6 +89,17 @@ class FlujoCasoCriticoIntegracionTest {
                 .andExpect(content().string(containsString("Hola Valentina, lamentamos lo ocurrido.")))
                 .andExpect(content().string(containsString("Caso tomado")))
                 .andExpect(content().string(containsString("Respuesta enviada")));
+
+        // Completar un paso del protocolo crítico queda en la bitácora de la página.
+        mockMvc.perform(post("/pqrs/2/protocolo/SUSPENDER_USO").with(operador).with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/2"))
+                .andExpect(flash().attributeExists("mensajeOk"));
+        assertThat(bitacoraRepository.findByPqrsIdOrderByFechaAsc(2L))
+                .extracting(r -> r.getAccion().name()).contains("PASO_PROTOCOLO_COMPLETADO");
+        mockMvc.perform(get("/pqrs/2").with(operador))
+                .andExpect(content().string(containsString("Protocolo crítico")))
+                .andExpect(content().string(containsString("Paso del protocolo completado")))
+                .andExpect(content().string(containsString("✔ Pedir a la clienta que suspenda el uso del producto")));
     }
 
     @Test

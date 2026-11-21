@@ -14,10 +14,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 
+import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
 
-/** Pantalla de un caso: ver la conversación, tomar el caso y responder. Las reglas viven en PqrsService. */
+/** Pantalla de un caso: ver la conversación, tomar el caso, completar el protocolo crítico y responder. Las reglas viven en PqrsService. */
 @Controller
 @RequestMapping("/pqrs")
 public class CasoController {
@@ -42,6 +43,18 @@ public class CasoController {
         try {
             pqrsService.tomarCaso(id, principal.getName());
             redireccion.addFlashAttribute("mensajeOk", "Caso tomado. Ya puedes responder.");
+        } catch (ReglaNegocioException e) {
+            redireccion.addFlashAttribute("mensajeError", e.getMessage());
+        }
+        return "redirect:/pqrs/" + id;
+    }
+
+    @PostMapping("/{id}/protocolo/{paso}")
+    public String completarPaso(@PathVariable Long id, @PathVariable PasoProtocolo paso, Principal principal,
+                                RedirectAttributes redireccion) {
+        try {
+            pqrsService.completarPaso(id, principal.getName(), paso);
+            redireccion.addFlashAttribute("mensajeOk", "Paso del protocolo completado.");
         } catch (ReglaNegocioException e) {
             redireccion.addFlashAttribute("mensajeError", e.getMessage());
         }
