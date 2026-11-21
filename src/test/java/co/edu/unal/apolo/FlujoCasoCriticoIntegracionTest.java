@@ -3,23 +3,22 @@ package co.edu.unal.apolo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import co.edu.unal.apolo.persistencia.BitacoraRepository;
 import co.edu.unal.apolo.persistencia.MensajeRepository;
@@ -63,13 +62,13 @@ class FlujoCasoCriticoIntegracionTest {
                 .andExpect(flash().attributeExists("mensajeError"));
         assertThat(mensajeRepository.findByPqrsIdOrderByFechaAsc(2L)).hasSize(1);
 
-        // Tomar el caso lo pasa a "En atención" y quita el banner.
+        // Tomar el caso lo pasa a "Atención inmediata" y quita el banner.
         mockMvc.perform(post("/pqrs/2/tomar").with(operador).with(csrf()))
                 .andExpect(redirectedUrl("/pqrs/2"))
                 .andExpect(flash().attributeExists("mensajeOk"));
         mockMvc.perform(get("/pqrs/2").with(operador))
                 .andExpect(content().string(not(containsString("Automatización pausada"))))
-                .andExpect(content().string(containsString("En atención")));
+                .andExpect(content().string(containsString("Atención inmediata")));
 
         // Ahora sí puede responder por el canal simulado.
         mockMvc.perform(post("/pqrs/2/responder").with(operador).with(csrf())

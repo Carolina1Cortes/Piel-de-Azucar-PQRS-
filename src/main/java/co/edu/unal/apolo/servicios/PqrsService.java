@@ -117,7 +117,9 @@ public class PqrsService {
             throw new ReglaNegocioException("Solo se puede tomar un caso pendiente que nadie atiende");
         }
         pqrs.setResponsable(usuario);
-        pqrs.setEstado(EstadoPqrs.EN_ATENCION);
+        pqrs.setEstado(pqrs.getPrioridad() == Prioridad.CRITICA
+        ? EstadoPqrs.ATENCION_INMEDIATA
+        : EstadoPqrs.EN_ATENCION);
         pqrsRepository.save(pqrs);
         registrar(pqrs, usuario, TipoAccion.CASO_TOMADO);
         return pqrs;

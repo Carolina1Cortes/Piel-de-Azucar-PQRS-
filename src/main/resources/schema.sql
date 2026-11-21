@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS pqrs (
     resuelta_por_id      BIGINT,
     CONSTRAINT uq_pqrs_id_externo UNIQUE (id_externo),
     CONSTRAINT ck_pqrs_canal CHECK (canal IN ('GMAIL')),
-    CONSTRAINT ck_pqrs_estado CHECK (estado IN ('PENDIENTE', 'EN_ATENCION', 'ESCALADA', 'DELEGADA', 'RESUELTA')),
+    CONSTRAINT ck_pqrs_estado CHECK (estado IN ('PENDIENTE', 'EN_ATENCION','ATENCION_INMEDIATA', 'ESCALADA', 'DELEGADA', 'RESUELTA')),
     CONSTRAINT ck_pqrs_prioridad CHECK (prioridad IN ('BAJA', 'MEDIA', 'ALTA', 'CRITICA')),
     CONSTRAINT fk_pqrs_cliente FOREIGN KEY (cliente_id) REFERENCES cliente (id),
     CONSTRAINT fk_pqrs_tipo FOREIGN KEY (tipo_consulta_id) REFERENCES tipo_consulta (id),
