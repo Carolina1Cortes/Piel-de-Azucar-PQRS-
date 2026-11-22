@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
 import co.edu.unal.apolo.dominio.Mensaje;
+import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.Prioridad;
 import co.edu.unal.apolo.dominio.RegistroBitacora;
@@ -367,7 +368,127 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
                 .hasMessageContaining("resuelto");
     }
 
+    // ---------- protocolo crítico
+
+    @Test
+    void completarPasoGuardaElRegistroConElNombreDelPaso() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.EN_ATENCION, operador);
+        prepararPaso(critica, operador);
+
+        servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SOLICITAR_FOTOS);
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getAccion()).isEqualTo(TipoAccion.PASO_PROTOCOLO_COMPLETADO);
+        assertThat(captor.getValue().getMotivo()).isEqualTo("SOLICITAR_FOTOS");
+        assertThat(captor.getValue().getUsuario()).isSameAs(operador);
+        assertThat(captor.getValue().getPqrs()).isSameAs(critica);
+    }
+
+    @Test
+    void rechazaCompletarUnPasoSiElCasoNoSeHaTomado() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.PENDIENTE, null);
+        when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(critica));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        assertThatThrownBy(() -> servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Toma el caso antes de completar el protocolo");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaCompletarUnPasoQueYaSeCompleto() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.EN_ATENCION, operador);
+        prepararPaso(critica, operador, registroPaso(PasoProtocolo.SUSPENDER_USO, operador));
+
+        assertThatThrownBy(() -> servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Ese paso ya se completó");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaCompletarUnPasoEnUnCasoNoCritico() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        assertThatThrownBy(() -> servicio.completarPaso(4L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("críticos");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void unOperadorNoPuedeCompletarPasosDeUnCasoQueAtiendeOtraPersona() {
+        Usuario otro = usuario(3L, Rol.OPERADOR, false);
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.EN_ATENCION, otro);
+        when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(critica));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        assertThatThrownBy(() -> servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso lo atiende otra persona");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void elDetalleMarcaLosPasosCompletadosYMuestraSuEtiquetaEnLaBitacora() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.EN_ATENCION, operador);
+        prepararDetalle(critica, operador);
+        RegistroBitacora paso = registroPaso(PasoProtocolo.SOLICITAR_LOTE, operador);
+        when(bitacoraRepository.findByPqrsIdAndAccionOrderByFechaAsc(2L, TipoAccion.PASO_PROTOCOLO_COMPLETADO))
+                .thenReturn(List.of(paso));
+        when(bitacoraRepository.findByPqrsIdOrderByFechaAsc(2L)).thenReturn(List.of(paso));
+
+        DetalleCaso detalle = servicio.detalle(2L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeCompletarPasos()).isTrue();
+        assertThat(detalle.protocolo()).extracting(DetalleCaso.PasoVista::paso)
+                .containsExactly(PasoProtocolo.values());
+        assertThat(detalle.protocolo()).extracting(DetalleCaso.PasoVista::completado)
+                .containsExactly(false, false, true, false);
+        assertThat(detalle.protocolo().get(2).usuario()).isEqualTo("Operador Uno");
+        assertThat(detalle.protocolo().get(2).fecha()).isEqualTo(LocalDateTime.of(2026, 11, 4, 10, 0));
+        assertThat(detalle.bitacora().get(0).motivo()).isEqualTo(PasoProtocolo.SOLICITAR_LOTE.getEtiqueta());
+    }
+
+    @Test
+    void elDetalleDeUnCasoNoCriticoNoTieneProtocolo() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararDetalle(caso, operador);
+
+        DetalleCaso detalle = servicio.detalle(4L, CORREO_OPERADOR);
+
+        assertThat(detalle.protocolo()).isEmpty();
+        assertThat(detalle.puedeCompletarPasos()).isFalse();
+    }
+
     // ---------- ayudas
+
+    private void prepararPaso(Pqrs pqrs, Usuario usuario, RegistroBitacora... completados) {
+        when(pqrsRepository.findByIdConDetalle(pqrs.getId())).thenReturn(Optional.of(pqrs));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(usuario));
+        when(bitacoraRepository.findByPqrsIdAndAccionOrderByFechaAsc(pqrs.getId(), TipoAccion.PASO_PROTOCOLO_COMPLETADO))
+                .thenReturn(List.of(completados));
+    }
+
+    private RegistroBitacora registroPaso(PasoProtocolo paso, Usuario usuario) {
+        RegistroBitacora registro = new RegistroBitacora();
+        registro.setFecha(LocalDateTime.of(2026, 11, 4, 10, 0));
+        registro.setAccion(TipoAccion.PASO_PROTOCOLO_COMPLETADO);
+        registro.setMotivo(paso.name());
+        registro.setUsuario(usuario);
+        return registro;
+    }
 
     private void prepararDetalle(Pqrs pqrs, Usuario usuario) {
         Mensaje entrante = new Mensaje();

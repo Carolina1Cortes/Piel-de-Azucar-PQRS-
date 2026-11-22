@@ -34,11 +34,13 @@ import co.edu.unal.apolo.dominio.Categoria;
 import co.edu.unal.apolo.dominio.Cliente;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
+import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.Prioridad;
 import co.edu.unal.apolo.dominio.TipoConsulta;
 import co.edu.unal.apolo.servicios.DetalleCaso;
 import co.edu.unal.apolo.servicios.DetalleCaso.MensajeVista;
+import co.edu.unal.apolo.servicios.DetalleCaso.PasoVista;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.RecursoNoEncontradoException;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
@@ -152,6 +154,45 @@ class CasoControllerTest {
                 .andExpect(flash().attribute("mensajeError", "Caso crítico: toma el caso antes de responder"));
     }
 
+    @Test
+    void completarUnPasoDelProtocoloLlamaAlServicioYVuelveAlCaso() throws Exception {
+        mockMvc.perform(post("/pqrs/10/protocolo/SOLICITAR_LOTE").with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attributeExists("mensajeOk"));
+
+        verify(pqrsService).completarPaso(10L, CORREO, PasoProtocolo.SOLICITAR_LOTE);
+    }
+
+    @Test
+    void siCompletarElPasoNoEstaPermitidoMuestraElMotivo() throws Exception {
+        doThrow(new ReglaNegocioException("Ese paso ya se completó"))
+                .when(pqrsService).completarPaso(10L, CORREO, PasoProtocolo.SUSPENDER_USO);
+
+        mockMvc.perform(post("/pqrs/10/protocolo/SUSPENDER_USO").with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeError", "Ese paso ya se completó"));
+    }
+
+    @Test
+    void unCasoCriticoMuestraLaSeccionDelProtocolo() throws Exception {
+        DetalleCaso base = detalle(false, false, true, null);
+        List<PasoVista> protocolo = List.of(
+                new PasoVista(PasoProtocolo.SUSPENDER_USO, true, LocalDateTime.of(2026, 11, 4, 9, 30), "Operador Uno"),
+                new PasoVista(PasoProtocolo.SOLICITAR_FOTOS, false, null, null));
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(new DetalleCaso(base.pqrs(), base.mensajes(), base.bitacora(),
+                base.diasHabilesRestantes(), false, false, true, null, protocolo, true));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Protocolo crítico")))
+                .andExpect(content().string(containsString("✔ " + PasoProtocolo.SUSPENDER_USO.getEtiqueta()
+                        + " · Operador Uno · 04/11/2026 09:30")))
+                .andExpect(content().string(containsString(PasoProtocolo.SOLICITAR_FOTOS.getEtiqueta())))
+                .andExpect(content().string(containsString("/pqrs/10/protocolo/SOLICITAR_FOTOS")))
+                .andExpect(content().string(containsString("Marcar completado")))
+                .andExpect(content().string(not(containsString("Toma el caso para completar los pasos."))));
+    }
+
     private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo) {
         Cliente cliente = new Cliente();
         cliente.setNombre("Valentina Ortiz");
@@ -170,6 +211,7 @@ class CasoControllerTest {
         pqrs.setTipoConsulta(tipo);
         MensajeVista mensaje = new MensajeVista(LocalDateTime.of(2026, 11, 3, 10, 0), DireccionMensaje.ENTRANTE,
                 "Me salió enrojecimiento con el sérum", "Hola, me salió enrojecimiento y ardor.", false, null);
-        return new DetalleCaso(pqrs, List.of(mensaje), List.of(), 4, criticoSinAsignar, puedeTomar, puedeResponder, motivo);
+        return new DetalleCaso(pqrs, List.of(mensaje), List.of(), 4, criticoSinAsignar, puedeTomar, puedeResponder, motivo,
+                List.of(), false);
     }
 }

@@ -73,6 +73,9 @@ textarea:disabled, input:disabled { background:#eee; color:#888; cursor:not-allo
 .tarjeta-login label { font-weight:600; font-size:.88rem; margin-top:.5rem; }
 .tarjeta-login .boton { margin-top:1rem; }
 
+.protocolo { list-style:none; padding:0; }
+.protocolo li { display:flex; gap:.75rem; align-items:center; margin:.35rem 0; }
+
 @media (max-width:600px) {
     .datos { grid-template-columns:1fr; }
     .burbuja.saliente { margin-left:0; }

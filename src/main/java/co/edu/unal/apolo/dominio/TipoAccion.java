@@ -9,7 +9,8 @@ public enum TipoAccion {
     DELEGADA("Delegada"),
     PRIORIDAD_CAMBIADA("Prioridad cambiada"),
     OPERADOR_BLOQUEADO("Operador bloqueado"),
-    CASO_RESUELTO("Caso resuelto");
+    CASO_RESUELTO("Caso resuelto"),
+    PASO_PROTOCOLO_COMPLETADO("Paso del protocolo completado");
 
     private final String etiqueta;
 

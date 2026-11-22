@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import co.edu.unal.apolo.dominio.DireccionMensaje;
+import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.TipoAccion;
 
@@ -15,6 +16,8 @@ import co.edu.unal.apolo.dominio.TipoAccion;
  * @param puedeTomar               el operador actual puede autoasignarse el caso
  * @param puedeResponder           el operador actual puede enviar una respuesta
  * @param motivoRespuestaBloqueada por qué no puede responder (nulo si puede)
+ * @param protocolo                pasos del protocolo crítico (vacío si el caso no es crítico)
+ * @param puedeCompletarPasos      el operador actual puede marcar pasos del protocolo
  */
 public record DetalleCaso(
         Pqrs pqrs,
@@ -24,7 +27,9 @@ public record DetalleCaso(
         boolean criticoSinAsignar,
         boolean puedeTomar,
         boolean puedeResponder,
-        String motivoRespuestaBloqueada) {
+        String motivoRespuestaBloqueada,
+        List<PasoVista> protocolo,
+        boolean puedeCompletarPasos) {
 
     /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la clienta y las respuestas automáticas. */
     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
@@ -33,5 +38,9 @@ public record DetalleCaso(
 
     /** Una línea de la bitácora; {@code usuario} es nulo cuando la acción la hizo el sistema. */
     public record RegistroVista(LocalDateTime fecha, TipoAccion accion, String usuario, String motivo, String notas) {
+    }
+
+    /** Un paso del protocolo crítico; {@code fecha} y {@code usuario} son nulos mientras no se complete. */
+    public record PasoVista(PasoProtocolo paso, boolean completado, LocalDateTime fecha, String usuario) {
     }
 }

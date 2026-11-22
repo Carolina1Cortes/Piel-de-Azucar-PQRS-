@@ -46,7 +46,8 @@ public class SimuladorController {
                 Pqrs pqrs = entradaSimuladaService.registrarCorreoEntrante(formulario.getNombre(),
                         formulario.getCorreo(), formulario.getAsunto(), formulario.getCuerpo(),
                         formulario.getTipoConsultaId());
-                redireccion.addFlashAttribute("mensajeOk", "Correo simulado recibido: caso #" + pqrs.getId() + ".");
+                redireccion.addFlashAttribute("mensajeOk", "Correo simulado recibido. Radicado "
+                        + pqrs.getRadicado() + " (caso #" + pqrs.getId() + ").");
                 return "redirect:/pqrs/" + pqrs.getId();
             } catch (ReglaNegocioException e) {
                 errores.reject("simulador.regla", e.getMessage());

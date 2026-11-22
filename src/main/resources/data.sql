@@ -43,15 +43,15 @@ MERGE INTO plantilla_respuesta (id, nombre, asunto, cuerpo, palabras_clave, tipo
     (3, 'Solicitud de cambio o devolución', 'Tu solicitud de cambio o devolución', 'Hola {nombre}, recibimos tu solicitud. Para continuar, cuéntanos el número de pedido y envíanos una foto del producto.', 'cambio,devolucion,devolver', 9, TRUE),
     (4, 'Agradecimiento por sugerencia o felicitación', '¡Gracias por escribirnos!', 'Hola {nombre}, gracias por tu mensaje. Lo compartiremos con todo el equipo de Piel de Azúcar.', 'gracias,felicitacion,sugerencia', 16, TRUE);
 
-MERGE INTO pqrs (id, id_externo, canal, fecha_llegada, asunto, estado, prioridad, fecha_limite, descripcion_solucion, fecha_resolucion, cliente_id, tipo_consulta_id, responsable_id, resuelta_por_id) KEY (id) VALUES
-    (1, 'gmail-msg-001', 'GMAIL', '2026-10-19 09:15:00', '¿Cuándo llega mi pedido #1042?', 'PENDIENTE', 'MEDIA', '2026-11-10', NULL, NULL, 1, 3, NULL, NULL),
-    (2, 'gmail-msg-002', 'GMAIL', '2026-10-16 19:40:00', 'Me salió enrojecimiento con el sérum', 'PENDIENTE', 'CRITICA', '2026-11-09', NULL, NULL, 2, 7, NULL, NULL),
-    (3, 'gmail-msg-003', 'GMAIL', '2026-10-14 08:00:00', '¿Cómo uso el ácido hialurónico?', 'RESUELTA', 'BAJA', '2026-11-05', 'Respuesta automática con el modo de uso del producto.', '2026-10-14 08:02:00', 3, 5, NULL, NULL),
-    (4, 'gmail-msg-004', 'GMAIL', '2026-10-13 10:00:00', 'Quiero devolver mi crema hidratante', 'EN_ATENCION', 'ALTA', '2026-11-04', NULL, NULL, 4, 9, 2, NULL),
-    (5, 'gmail-msg-005', 'GMAIL', '2026-10-09 11:00:00', 'Me cobraron dos veces mi pedido', 'ESCALADA', 'ALTA', '2026-11-03', NULL, NULL, 5, 12, 2, NULL),
-    (6, 'gmail-msg-006', 'GMAIL', '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'RESUELTA', 'BAJA', '2026-10-30', 'Se agradeció la felicitación y se compartió con el equipo.', '2026-10-08 16:20:00', 6, 16, NULL, 2),
-    (7, 'gmail-msg-007', 'GMAIL', '2026-09-28 14:30:00', 'Mi pedido llegó incompleto', 'EN_ATENCION', 'ALTA', '2026-10-20', NULL, NULL, 1, 4, 2, NULL),
-    (8, 'gmail-msg-008', 'GMAIL', '2026-10-20 12:10:00', 'Queja por mal trato en la línea de atención', 'DELEGADA', 'ALTA', '2026-11-11', NULL, NULL, 2, 13, 2, NULL);
+MERGE INTO pqrs (id, id_externo, radicado, canal, fecha_llegada, asunto, estado, prioridad, fecha_limite, descripcion_solucion, fecha_resolucion, cliente_id, tipo_consulta_id, responsable_id, resuelta_por_id) KEY (id) VALUES
+    (1, 'gmail-msg-001', 'PQRS-2026-000001', 'GMAIL', '2026-10-19 09:15:00', '¿Cuándo llega mi pedido #1042?', 'PENDIENTE', 'MEDIA', '2026-11-10', NULL, NULL, 1, 3, NULL, NULL),
+    (2, 'gmail-msg-002', 'PQRS-2026-000002', 'GMAIL', '2026-10-16 19:40:00', 'Me salió enrojecimiento con el sérum', 'PENDIENTE', 'CRITICA', '2026-11-09', NULL, NULL, 2, 7, NULL, NULL),
+    (3, 'gmail-msg-003', 'PQRS-2026-000003', 'GMAIL', '2026-10-14 08:00:00', '¿Cómo uso el ácido hialurónico?', 'RESUELTA', 'BAJA', '2026-11-05', 'Respuesta automática con el modo de uso del producto.', '2026-10-14 08:02:00', 3, 5, NULL, NULL),
+    (4, 'gmail-msg-004', 'PQRS-2026-000004', 'GMAIL', '2026-10-13 10:00:00', 'Quiero devolver mi crema hidratante', 'EN_ATENCION', 'ALTA', '2026-11-04', NULL, NULL, 4, 9, 2, NULL),
+    (5, 'gmail-msg-005', 'PQRS-2026-000005', 'GMAIL', '2026-10-09 11:00:00', 'Me cobraron dos veces mi pedido', 'ESCALADA', 'ALTA', '2026-11-03', NULL, NULL, 5, 12, 2, NULL),
+    (6, 'gmail-msg-006', 'PQRS-2026-000006', 'GMAIL', '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'RESUELTA', 'BAJA', '2026-10-30', 'Se agradeció la felicitación y se compartió con el equipo.', '2026-10-08 16:20:00', 6, 16, NULL, 2),
+    (7, 'gmail-msg-007', 'PQRS-2026-000007', 'GMAIL', '2026-09-28 14:30:00', 'Mi pedido llegó incompleto', 'EN_ATENCION', 'ALTA', '2026-10-20', NULL, NULL, 1, 4, 2, NULL),
+    (8, 'gmail-msg-008', 'PQRS-2026-000008', 'GMAIL', '2026-10-20 12:10:00', 'Queja por mal trato en la línea de atención', 'DELEGADA', 'ALTA', '2026-11-11', NULL, NULL, 2, 13, 2, NULL);
 
 MERGE INTO mensaje (id, pqrs_id, fecha, asunto, cuerpo, direccion, automatico, autor_id) KEY (id) VALUES
     (1, 1, '2026-10-19 09:15:00', '¿Cuándo llega mi pedido #1042?', 'Hola, hice el pedido hace una semana y todavía no llega. ¿Me pueden decir en qué va?', 'ENTRANTE', FALSE, NULL),

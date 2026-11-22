@@ -26,6 +26,7 @@
             <thead>
             <tr>
                 <th>ID</th>
+                <th>Radicado</th>
                 <th>Asunto</th>
                 <th>Clienta</th>
                 <th>Categoría</th>
@@ -38,6 +39,7 @@
             <tbody>
             <tr th:each="r : ${pqrs}">
                 <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().id}">1</a></td>
+                <td th:text="${r.pqrs().radicado != null} ? ${r.pqrs().radicado} : '—'">—</td>
                 <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().asunto}">Asunto</a></td>
                 <td th:text="${r.pqrs().cliente.nombre}">Clienta</td>
                 <td th:text="${r.pqrs().tipoConsulta.categoria.etiqueta}">Categoría</td>
@@ -54,7 +56,7 @@
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(pqrs)}">
-                <td colspan="8">No hay PQRS para este filtro.</td>
+                <td colspan="9">No hay PQRS para este filtro.</td>
             </tr>
             </tbody>
         </table>
