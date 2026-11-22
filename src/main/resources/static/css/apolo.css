@@ -13,6 +13,7 @@ th { font-weight:600; background:#f4f1f6; }
 .etiqueta { padding:.15rem .5rem; border-radius:10px; font-size:.78rem; }
 .prio-baja { background:#e8f3ea; } .prio-media { background:#fff4d6; }
 .prio-alta { background:#ffe3cc; } .prio-critica { background:#f8d4d4; font-weight:600; }
+.estado-atencion_inmediata { background:#f8d4d4; font-weight:600; border:1px solid #c0392b; }
 
 /* --- Cabecera con sesión --- */
 .cabecera { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }

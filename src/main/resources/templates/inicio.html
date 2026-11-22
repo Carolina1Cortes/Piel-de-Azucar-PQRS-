@@ -44,7 +44,7 @@
                 <td th:text="${r.pqrs().cliente.nombre}">Clienta</td>
                 <td th:text="${r.pqrs().tipoConsulta.categoria.etiqueta}">Categoría</td>
                 <td><span class="etiqueta" th:classappend="'prio-' + ${r.pqrs().prioridad.name().toLowerCase()}" th:text="${r.pqrs().prioridad.etiqueta}">Media</span></td>
-                <td th:text="${r.pqrs().estado.etiqueta}">Pendiente</td>
+                <td><span class="etiqueta" th:classappend="'estado-' + ${r.pqrs().estado.name().toLowerCase()}" th:text="${r.pqrs().estado.etiqueta}">Pendiente</span></td>
                 <td th:text="${r.pqrs().responsable != null} ? ${r.pqrs().responsable.nombre} : '—'">—</td>
                 <td>
                     <span th:text="${#temporals.format(r.pqrs().fechaLimite, 'dd/MM/yyyy')}">01/01/2026</span>
