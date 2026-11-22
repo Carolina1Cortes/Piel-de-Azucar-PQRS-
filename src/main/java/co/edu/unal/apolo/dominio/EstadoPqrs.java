@@ -5,6 +5,7 @@ public enum EstadoPqrs {
 
     PENDIENTE("Pendiente"),
     EN_ATENCION("En atención"),
+    ATENCION_INMEDIATA("Atención inmediata"),
     ESCALADA("Escalada"),
     DELEGADA("Delegada"),
     RESUELTA("Resuelta");

@@ -1,13 +1,5 @@
 package co.edu.unal.apolo.servicios;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -16,11 +8,18 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import co.edu.unal.apolo.dominio.DireccionMensaje;
@@ -160,7 +159,7 @@ class PqrsServiceTest {
     // ---------- tomar caso
 
     @Test
-    void tomarCasoAsignaAlOperadorLoPasaAEnAtencionYRegistraEnBitacora() {
+    void tomarCasoCriticoLoPasaAAtencionInmediataYRegistraEnBitacora() {
         Usuario operador = usuario(2L, Rol.OPERADOR, false);
         Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.PENDIENTE, null);
         when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(critica));
@@ -169,7 +168,7 @@ class PqrsServiceTest {
         servicio.tomarCaso(2L, CORREO_OPERADOR);
 
         assertThat(critica.getResponsable()).isSameAs(operador);
-        assertThat(critica.getEstado()).isEqualTo(EstadoPqrs.EN_ATENCION);
+        assertThat(critica.getEstado()).isEqualTo(EstadoPqrs.ATENCION_INMEDIATA);
         ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
         verify(bitacoraRepository).save(captor.capture());
         assertThat(captor.getValue().getAccion()).isEqualTo(TipoAccion.CASO_TOMADO);
@@ -177,6 +176,18 @@ class PqrsServiceTest {
         assertThat(captor.getValue().getPqrs()).isSameAs(critica);
         assertThat(captor.getValue().getFecha()).isEqualTo(LocalDateTime.of(2026, 11, 4, 15, 0));
     }
+
+    @Test
+void tomarCasoNoCriticoLoPasaAEnAtencion() {
+    Usuario operador = usuario(2L, Rol.OPERADOR, false);
+    Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.PENDIENTE, null);
+    when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+    when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+    servicio.tomarCaso(4L, CORREO_OPERADOR);
+
+    assertThat(caso.getEstado()).isEqualTo(EstadoPqrs.EN_ATENCION);
+}
 
     @Test
     void rechazaTomarElCasoSiElOperadorEstaBloqueado() {
