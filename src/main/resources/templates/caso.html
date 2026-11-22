@@ -32,7 +32,7 @@
         <dt>Prioridad</dt>
         <dd><span class="etiqueta" th:classappend="'prio-' + ${caso.pqrs().prioridad.name().toLowerCase()}" th:text="${caso.pqrs().prioridad.etiqueta}">Media</span></dd>
         <dt>Estado</dt>
-        <dd th:text="${caso.pqrs().estado.etiqueta}">Pendiente</dd>
+        <dd><span class="etiqueta" th:classappend="'estado-' + ${caso.pqrs().estado.name().toLowerCase()}" th:text="${caso.pqrs().estado.etiqueta}">Pendiente</span></dd>
         <dt>Responsable</dt>
         <dd th:text="${caso.pqrs().responsable != null} ? ${caso.pqrs().responsable.nombre} : 'Sin asignar'">Sin asignar</dd>
         <dt>Canal</dt>
