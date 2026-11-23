@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS registro_bitacora (
     pqrs_id        BIGINT,
     usuario_id     BIGINT,   -- NULL cuando la acción la hizo el sistema
     CONSTRAINT ck_bitacora_accion CHECK (accion IN ('CASO_TOMADO', 'RESPUESTA_ENVIADA', 'ESCALADA', 'DELEGADA',
-        'PRIORIDAD_CAMBIADA', 'OPERADOR_BLOQUEADO', 'CASO_RESUELTO', 'PASO_PROTOCOLO_COMPLETADO')),
+        'PRIORIDAD_CAMBIADA', 'OPERADOR_BLOQUEADO', 'CASO_RESUELTO', 'PASO_PROTOCOLO_COMPLETADO', 'NOTA_INTERNA')),
     CONSTRAINT fk_bitacora_pqrs FOREIGN KEY (pqrs_id) REFERENCES pqrs (id),
     CONSTRAINT fk_bitacora_usuario FOREIGN KEY (usuario_id) REFERENCES usuario (id)
 );
@@ -132,8 +132,10 @@ CREATE TABLE IF NOT EXISTS festivo (
 ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS radicado VARCHAR(30);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_pqrs_radicado ON pqrs (radicado);
 ALTER TABLE registro_bitacora DROP CONSTRAINT IF EXISTS ck_bitacora_accion;
+-- E5-11: la acción NOTA_INTERNA permite guardar una nota interna sin cambiar el estado del caso
 ALTER TABLE registro_bitacora ADD CONSTRAINT ck_bitacora_accion CHECK (accion IN ('CASO_TOMADO', 'RESPUESTA_ENVIADA',
-    'ESCALADA', 'DELEGADA', 'PRIORIDAD_CAMBIADA', 'OPERADOR_BLOQUEADO', 'CASO_RESUELTO', 'PASO_PROTOCOLO_COMPLETADO'));
+    'ESCALADA', 'DELEGADA', 'PRIORIDAD_CAMBIADA', 'OPERADOR_BLOQUEADO', 'CASO_RESUELTO', 'PASO_PROTOCOLO_COMPLETADO',
+    'NOTA_INTERNA'));
 ALTER TABLE pqrs DROP CONSTRAINT IF EXISTS ck_pqrs_estado;
 ALTER TABLE pqrs ADD CONSTRAINT ck_pqrs_estado CHECK (estado IN ('PENDIENTE', 'EN_ATENCION', 'ATENCION_INMEDIATA', 'ESCALADA', 'DELEGADA', 'RESUELTA'));
 -- E5-07: palabras clave por tipo de consulta y categoría para los casos que no se pueden clasificar solos

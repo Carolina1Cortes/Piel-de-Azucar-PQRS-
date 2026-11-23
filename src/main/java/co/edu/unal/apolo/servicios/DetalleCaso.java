@@ -18,6 +18,7 @@ import co.edu.unal.apolo.dominio.TipoAccion;
  * @param motivoRespuestaBloqueada por qué no puede responder (nulo si puede)
  * @param protocolo                pasos del protocolo crítico (vacío si el caso no es crítico)
  * @param puedeCompletarPasos      el operador actual puede marcar pasos del protocolo
+ * @param motivoNotaBloqueada      por qué no puede agregar una nota interna (nulo si puede)
  */
 public record DetalleCaso(
         Pqrs pqrs,
@@ -29,7 +30,13 @@ public record DetalleCaso(
         boolean puedeResponder,
         String motivoRespuestaBloqueada,
         List<PasoVista> protocolo,
-        boolean puedeCompletarPasos) {
+        boolean puedeCompletarPasos,
+        String motivoNotaBloqueada) {
+
+    /** El operador actual puede agregar una nota interna al caso. */
+    public boolean puedeAgregarNota() {
+        return motivoNotaBloqueada == null;
+    }
 
     /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas. */
     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,

@@ -512,7 +512,268 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
         assertThat(captor.getValue().getUsuario()).isSameAs(admin);
     }
 
+    // ---------- E5-12: todo cambio de estado deja su registro
+
+    @Test
+    void tomarUnCasoCriticoRegistraElCambioDeEstadoConFechaUsuarioYAccion() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.PENDIENTE, null);
+        when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(critica));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        servicio.tomarCaso(2L, CORREO_OPERADOR);
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        RegistroBitacora registro = captor.getValue();
+        assertThat(registro.getAccion()).isEqualTo(TipoAccion.CASO_TOMADO);
+        assertThat(registro.getUsuario()).isSameAs(operador);
+        assertThat(registro.getFecha()).isEqualTo(LocalDateTime.of(2026, 11, 4, 15, 0));
+        assertThat(registro.getMotivo()).isEqualTo("Pendiente → Atención inmediata");
+        assertThat(registro.getNotasInternas()).isNull();
+    }
+
+    @Test
+    void tomarUnCasoNoCriticoRegistraElCambioAEnAtencion() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.PENDIENTE, null);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        servicio.tomarCaso(4L, CORREO_OPERADOR);
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getMotivo()).isEqualTo("Pendiente → En atención");
+    }
+
+    @Test
+    void tomarUnCasoQueYaNoEstaPendienteNoCambiaElEstadoNiDejaRegistro() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, null);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        assertThatThrownBy(() -> servicio.tomarCaso(4L, CORREO_OPERADOR)).isInstanceOf(ReglaNegocioException.class);
+
+        assertThat(caso.getEstado()).isEqualTo(EstadoPqrs.EN_ATENCION);
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void responderCompletarUnPasoYAgregarUnaNotaNoCambianElEstadoDelCaso() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararPaso(critica, operador);
+
+        servicio.enviarRespuesta(2L, CORREO_OPERADOR, "Hola", "Texto");
+        servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SOLICITAR_LOTE);
+        servicio.agregarNotaInterna(2L, CORREO_OPERADOR, "Nota");
+
+        assertThat(critica.getEstado()).isEqualTo(EstadoPqrs.ATENCION_INMEDIATA);
+        verify(pqrsRepository, never()).save(any());
+    }
+
+    // ---------- E5-11: notas internas
+
+    @Test
+    void agregarUnaNotaInternaLaGuardaSoloEnLaBitacoraYNoLaEnviaALaPersonaCliente() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararNota(caso, operador);
+
+        servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "  Llamar a la persona cliente mañana.  ");
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        RegistroBitacora registro = captor.getValue();
+        assertThat(registro.getAccion()).isEqualTo(TipoAccion.NOTA_INTERNA);
+        assertThat(registro.getNotasInternas()).isEqualTo("Llamar a la persona cliente mañana.");
+        assertThat(registro.getMotivo()).isNull();
+        assertThat(registro.getUsuario()).isSameAs(operador);
+        assertThat(registro.getPqrs()).isSameAs(caso);
+        assertThat(registro.getFecha()).isEqualTo(LocalDateTime.of(2026, 11, 4, 15, 0));
+        assertThat(caso.getEstado()).isEqualTo(EstadoPqrs.EN_ATENCION);
+        verifyNoInteractions(canal, mensajeRepository);
+    }
+
+    @Test
+    void rechazaUnaNotaInternaVaciaOSoloConEspacios() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararNota(caso, operador);
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "   "))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("La nota interna es obligatoria para esta acción");
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, null))
+                .isInstanceOf(ReglaNegocioException.class);
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void aceptaUnaNotaDeExactamenteElLargoMaximoYRechazaUnaMasLarga() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararNota(caso, operador);
+
+        servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "a".repeat(PqrsService.LARGO_MAXIMO_NOTA));
+        verify(bitacoraRepository).save(any(RegistroBitacora.class));
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "a".repeat(PqrsService.LARGO_MAXIMO_NOTA + 1)))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("2000");
+    }
+
+    @Test
+    void rechazaAgregarUnaNotaSiElOperadorEstaBloqueado() {
+        Usuario bloqueado = usuario(3L, Rol.OPERADOR, true);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, bloqueado);
+        prepararNota(caso, bloqueado);
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "Nota"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("bloqueado");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaAgregarUnaNotaSiElCasoNoSeHaTomado() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.PENDIENTE, null);
+        prepararNota(caso, operador);
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "Nota"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Toma el caso antes de agregar notas internas");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaAgregarUnaNotaSiElCasoYaFueResuelto() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(3L, Prioridad.MEDIA, EstadoPqrs.RESUELTA, operador);
+        prepararNota(caso, operador);
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(3L, CORREO_OPERADOR, "Nota"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso ya fue resuelto");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void unOperadorNoPuedeAgregarNotasAUnCasoQueAtiendeOtraPersona() {
+        Usuario otro = usuario(3L, Rol.OPERADOR, false);
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, otro);
+        prepararNota(caso, operador);
+
+        assertThatThrownBy(() -> servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "Nota"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso lo atiende otra persona");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void unAdminSiPuedeAgregarNotasAUnCasoQueAtiendeUnOperador() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Usuario admin = usuario(1L, Rol.ADMIN, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararNota(caso, admin);
+
+        servicio.agregarNotaInterna(4L, CORREO_OPERADOR, "Revisado por administración");
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getUsuario()).isSameAs(admin);
+    }
+
+    @Test
+    void lasAccionesQueExigenNotaNoSeRegistranSinNotaYNoDejanRastro() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+
+        for (TipoAccion accion : new TipoAccion[] {TipoAccion.CASO_RESUELTO, TipoAccion.ESCALADA}) {
+            assertThatThrownBy(() -> servicio.registrar(caso, operador, accion, null, null))
+                    .isInstanceOf(ReglaNegocioException.class)
+                    .hasMessage("La nota interna es obligatoria para esta acción");
+            assertThatThrownBy(() -> servicio.registrar(caso, operador, accion, "Motivo", "  "))
+                    .isInstanceOf(ReglaNegocioException.class);
+        }
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void lasAccionesQueExigenNotaSeRegistranCuandoTraenNota() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+
+        servicio.registrar(caso, operador, TipoAccion.CASO_RESUELTO, "En atención → Resuelta", " Se reenvió el pedido. ");
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getAccion()).isEqualTo(TipoAccion.CASO_RESUELTO);
+        assertThat(captor.getValue().getNotasInternas()).isEqualTo("Se reenvió el pedido.");
+        assertThat(captor.getValue().getMotivo()).isEqualTo("En atención → Resuelta");
+    }
+
+    @Test
+    void lasAccionesQueNoExigenNotaSeRegistranSinNota() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+
+        servicio.registrar(caso, operador, TipoAccion.RESPUESTA_ENVIADA, null, null);
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getNotasInternas()).isNull();
+    }
+
+    @Test
+    void elDetalleMuestraLaNotaEnLaBitacoraPeroNoEnLaConversacion() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararDetalle(caso, operador);
+        RegistroBitacora nota = new RegistroBitacora();
+        nota.setFecha(LocalDateTime.of(2026, 11, 4, 11, 0));
+        nota.setAccion(TipoAccion.NOTA_INTERNA);
+        nota.setNotasInternas("Confirmar el lote con bodega.");
+        nota.setUsuario(operador);
+        when(bitacoraRepository.findByPqrsIdOrderByFechaAsc(4L)).thenReturn(List.of(nota));
+
+        DetalleCaso detalle = servicio.detalle(4L, CORREO_OPERADOR);
+
+        assertThat(detalle.bitacora()).extracting(DetalleCaso.RegistroVista::notas).containsExactly("Confirmar el lote con bodega.");
+        assertThat(detalle.mensajes()).extracting(DetalleCaso.MensajeVista::cuerpo)
+                .doesNotContain("Confirmar el lote con bodega.");
+    }
+
+    @Test
+    void elDetalleIndicaSiElOperadorPuedeAgregarNotas() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs tomado = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        prepararDetalle(tomado, operador);
+
+        DetalleCaso conPermiso = servicio.detalle(4L, CORREO_OPERADOR);
+
+        assertThat(conPermiso.puedeAgregarNota()).isTrue();
+        assertThat(conPermiso.motivoNotaBloqueada()).isNull();
+
+        Pqrs sinTomar = pqrs(5L, Prioridad.ALTA, EstadoPqrs.PENDIENTE, null);
+        prepararDetalle(sinTomar, operador);
+
+        DetalleCaso sinPermiso = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(sinPermiso.puedeAgregarNota()).isFalse();
+        assertThat(sinPermiso.motivoNotaBloqueada()).isEqualTo("Toma el caso antes de agregar notas internas");
+    }
+
     // ---------- ayudas
+
+    private void prepararNota(Pqrs pqrs, Usuario usuario) {
+        when(pqrsRepository.findByIdConDetalle(pqrs.getId())).thenReturn(Optional.of(pqrs));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(usuario));
+    }
 
     private void prepararPaso(Pqrs pqrs, Usuario usuario, RegistroBitacora... completados) {
         when(pqrsRepository.findByIdConDetalle(pqrs.getId())).thenReturn(Optional.of(pqrs));

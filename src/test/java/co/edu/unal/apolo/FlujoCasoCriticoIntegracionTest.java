@@ -69,7 +69,8 @@ class FlujoCasoCriticoIntegracionTest {
                 .andExpect(flash().attributeExists("mensajeOk"));
         mockMvc.perform(get("/pqrs/2").with(operador))
                 .andExpect(content().string(not(containsString("Automatización pausada"))))
-                .andExpect(content().string(containsString("Atención inmediata")));
+                .andExpect(content().string(containsString("Atención inmediata")))
+                .andExpect(content().string(containsString("Pendiente → Atención inmediata")));
 
         // Ahora sí puede responder por el canal simulado.
         mockMvc.perform(post("/pqrs/2/responder").with(operador).with(csrf())
@@ -99,6 +100,27 @@ class FlujoCasoCriticoIntegracionTest {
                 .andExpect(content().string(containsString("Protocolo crítico")))
                 .andExpect(content().string(containsString("Paso del protocolo completado")))
                 .andExpect(content().string(containsString("✔ Pedir a la persona cliente que suspenda el uso del producto")));
+
+        // Una nota vacía se rechaza sin dejar rastro.
+        mockMvc.perform(post("/pqrs/2/notas").with(operador).with(csrf()).param("nota", "  "))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Escribe la nota antes de guardarla")));
+        assertThat(bitacoraRepository.findByPqrsIdOrderByFechaAsc(2L))
+                .extracting(r -> r.getAccion().name()).doesNotContain("NOTA_INTERNA");
+
+        // Una nota interna queda en la bitácora del caso, pero no en la conversación con la persona cliente.
+        mockMvc.perform(post("/pqrs/2/notas").with(operador).with(csrf())
+                        .param("nota", "La persona prefiere que la llamemos por la tarde."))
+                .andExpect(redirectedUrl("/pqrs/2"))
+                .andExpect(flash().attributeExists("mensajeOk"));
+        assertThat(bitacoraRepository.findByPqrsIdOrderByFechaAsc(2L))
+                .extracting(r -> r.getAccion().name()).contains("NOTA_INTERNA");
+        assertThat(mensajeRepository.findByPqrsIdOrderByFechaAsc(2L))
+                .extracting(m -> m.getDireccion().name()).containsExactly("ENTRANTE", "SALIENTE");
+        assertThat(mensajeRepository.findByPqrsIdOrderByFechaAsc(2L))
+                .extracting(m -> m.getCuerpo()).noneMatch(c -> c.contains("llamemos por la tarde"));
+        mockMvc.perform(get("/pqrs/2").with(operador))
+                .andExpect(content().string(containsString("Nota interna: La persona prefiere que la llamemos por la tarde.")));
     }
 
     @Test

@@ -18,7 +18,7 @@ import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
 
-/** Pantalla de un caso: ver la conversación, tomar el caso, completar el protocolo crítico y responder. Las reglas viven en PqrsService. */
+/** Pantalla de un caso: ver la conversación, tomar el caso, completar el protocolo crítico, responder y agregar notas internas. Las reglas viven en PqrsService. */
 @Controller
 @RequestMapping("/pqrs")
 public class CasoController {
@@ -32,9 +32,6 @@ public class CasoController {
     @GetMapping("/{id}")
     public String ver(@PathVariable Long id, Principal principal, Model model) {
         cargarCaso(id, principal, model);
-        if (!model.containsAttribute("formulario")) {
-            model.addAttribute("formulario", new RespuestaFormulario());
-        }
         return "caso";
     }
 
@@ -81,8 +78,34 @@ public class CasoController {
         return "redirect:/pqrs/" + id;
     }
 
+    @PostMapping("/{id}/notas")
+    public String agregarNota(@PathVariable Long id,
+                              @Valid @ModelAttribute("notaFormulario") NotaInternaFormulario notaFormulario,
+                              BindingResult errores,
+                              Principal principal,
+                              Model model,
+                              RedirectAttributes redireccion) {
+        if (errores.hasErrors()) {
+            cargarCaso(id, principal, model);
+            return "caso";
+        }
+        try {
+            pqrsService.agregarNotaInterna(id, principal.getName(), notaFormulario.getNota());
+            redireccion.addFlashAttribute("mensajeOk", "Nota interna guardada. Solo la ve el equipo.");
+        } catch (ReglaNegocioException e) {
+            redireccion.addFlashAttribute("mensajeError", e.getMessage());
+        }
+        return "redirect:/pqrs/" + id;
+    }
+
     private void cargarCaso(Long id, Principal principal, Model model) {
         model.addAttribute("caso", pqrsService.detalle(id, principal.getName()));
         model.addAttribute("usuario", principal.getName());
+        if (!model.containsAttribute("formulario")) {
+            model.addAttribute("formulario", new RespuestaFormulario());
+        }
+        if (!model.containsAttribute("notaFormulario")) {
+            model.addAttribute("notaFormulario", new NotaInternaFormulario());
+        }
     }
 }

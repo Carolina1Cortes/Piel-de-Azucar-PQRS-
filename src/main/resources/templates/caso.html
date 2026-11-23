@@ -97,6 +97,17 @@
         <button class="boton" type="submit" th:disabled="${!caso.puedeResponder()}">Enviar respuesta</button>
     </form>
 
+    <h3>Nota interna</h3>
+    <p class="nota">Solo la ve el equipo: no se envía a la persona cliente ni aparece en la conversación.</p>
+    <p class="nota" th:if="${!caso.puedeAgregarNota()}" th:text="${caso.motivoNotaBloqueada()}">Motivo</p>
+    <form th:action="@{/pqrs/{id}/notas(id=${caso.pqrs().id})}" th:object="${notaFormulario}" method="post" class="formulario">
+        <label for="nota">Nota</label>
+        <textarea id="nota" rows="3" th:field="*{nota}" th:disabled="${!caso.puedeAgregarNota()}"></textarea>
+        <p class="error-campo" th:if="${#fields.hasErrors('nota')}" th:errors="*{nota}">Error</p>
+
+        <button class="boton" type="submit" th:disabled="${!caso.puedeAgregarNota()}">Guardar nota</button>
+    </form>
+
     <h3>Bitácora</h3>
     <div class="tabla-scroll">
         <table>
@@ -108,7 +119,11 @@
                 <td th:text="${#temporals.format(r.fecha(), 'dd/MM/yyyy HH:mm')}">01/01/2026 09:00</td>
                 <td th:text="${r.accion().etiqueta}">Caso tomado</td>
                 <td th:text="${r.usuario() != null} ? ${r.usuario()} : 'Sistema'">Operador</td>
-                <td th:text="${r.motivo() != null} ? ${r.motivo()} : (${r.notas() != null} ? ${r.notas()} : '—')">—</td>
+                <td>
+                    <span th:if="${r.motivo() != null}" th:text="${r.motivo()}">Pendiente → En atención</span>
+                    <span class="nota-interna" th:if="${r.notas() != null}" th:text="'Nota interna: ' + ${r.notas()}">Nota interna: texto</span>
+                    <span th:if="${r.motivo() == null and r.notas() == null}">—</span>
+                </td>
             </tr>
             <tr th:if="${#lists.isEmpty(caso.bitacora())}">
                 <td colspan="4">Sin registros todavía.</td>

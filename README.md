@@ -19,7 +19,8 @@ El objetivo del incremento es permitir que un operador autenticado consulte un c
 - **Atención de casos críticos:** cuando un caso crítico no tiene responsable, se muestra el aviso "Automatización pausada" y se bloquea el formulario de respuesta hasta que un operador lo tome.
 - **Toma de casos:** asigna el caso al operador, cambia su estado a "En atención", habilita el envío de respuestas y registra la acción en la bitácora.
 - **Respuesta manual:** guarda el mensaje saliente en la conversación y lo entrega a `CanalSimulado`, que registra el envío en el log de la aplicación.
-- **Trazabilidad:** las acciones relevantes de atención quedan asociadas al caso mediante registros de bitácora.
+- **Trazabilidad:** las acciones relevantes de atención quedan asociadas al caso mediante registros de bitácora. Todo cambio de estado de un caso deja un registro con fecha, usuario, acción y el cambio de estado (por ejemplo, "Pendiente → Atención inmediata").
+- **Notas internas:** el operador responsable (o un Admin) puede agregar notas al caso. Quedan solo en la bitácora, visibles para el equipo; nunca se envían ni aparecen en la conversación con la persona cliente. La regla de qué acciones exigen una nota está en `TipoAccion.exigeNotaInterna()` (hoy: resolver, escalar y la propia nota); esas acciones se rechazan si no traen nota.
 
 ## Cómo funciona el flujo de atención
 
@@ -215,6 +216,8 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 | Toma y autoasignación de casos | Implementada |
 | Respuesta mediante canal simulado | Implementada |
 | Registro de acciones en bitácora | Implementado |
+| Bitácora de cada cambio de estado (fecha, usuario, acción y cambio de estado) | Implementada (hoy el único cambio de estado disponible es tomar el caso; resolver, escalar y delegar usarán el mismo mecanismo) |
+| Notas internas (solo equipo, no visibles para la persona cliente) | Implementadas; la exigencia de nota al resolver o escalar queda lista en el servicio y se activa cuando existan esas acciones en la interfaz |
 | Radicado y confirmación de recepción | Implementada |
 | Lista de chequeo del protocolo crítico | Implementada |
 | Clasificación automática por palabras clave (`ClasificacionService`) | Implementada como servicio (E5-07); falta conectarla al simulador (E5-08) |

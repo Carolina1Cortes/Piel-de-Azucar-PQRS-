@@ -6,6 +6,7 @@ header h1 { margin:0; font-size:1.3rem; letter-spacing:.15em; color:var(--acento
 header p { margin:.2rem 0 0; font-size:.85rem; color:#777; }
 main { padding:1.5rem; max-width:1100px; margin:0 auto; }
 .nota { color:#777; font-size:.85rem; }
+.nota-interna { display:block; white-space:normal; font-style:italic; color:#5a4a68; }
 .tabla-scroll { overflow-x:auto; background:#fff; border:1px solid var(--linea); border-radius:6px; }
 table { border-collapse:collapse; width:100%; font-size:.9rem; }
 th, td { padding:.6rem .8rem; text-align:left; border-bottom:1px solid var(--linea); white-space:nowrap; }

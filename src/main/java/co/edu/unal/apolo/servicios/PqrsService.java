@@ -33,14 +33,17 @@ import co.edu.unal.apolo.servicios.DetalleCaso.PasoVista;
 import co.edu.unal.apolo.servicios.DetalleCaso.RegistroVista;
 
 /**
- * Casos de uso sobre PQRS: bandeja, detalle de un caso, tomar un caso (CU-03), enviar una respuesta manual (CU-03)
- * y completar los pasos del protocolo crítico (CU-03).
- * Todas las acciones del operador quedan en la bitácora.
+ * Casos de uso sobre PQRS: bandeja, detalle de un caso, tomar un caso (CU-03), enviar una respuesta manual (CU-03),
+ * completar los pasos del protocolo crítico (CU-03) y agregar notas internas (CU-03).
+ * Todas las acciones del operador quedan en la bitácora y todo cambio de estado deja su registro (E5-12).
+ * Las notas internas viven solo en la bitácora: nunca forman parte de la conversación con la persona cliente (E5-11).
  */
 @Service
 public class PqrsService {
 
     private static final int LARGO_MAXIMO_ASUNTO = 300;
+    /** Igual al largo de {@code registro_bitacora.notas_internas}. */
+    static final int LARGO_MAXIMO_NOTA = 2000;
 
     private final PqrsRepository pqrsRepository;
     private final UsuarioRepository usuarioRepository;
@@ -111,12 +114,14 @@ public class PqrsService {
         boolean puedeCompletarPasos = critico && motivoRechazoPaso(pqrs, usuario).isEmpty();
 
         return new DetalleCaso(pqrs, mensajes, bitacora, diasRestantes, esCriticoSinAsignar(pqrs),
-                puedeTomar, motivoRechazo.isEmpty(), motivoRechazo.orElse(null), protocolo, puedeCompletarPasos);
+                puedeTomar, motivoRechazo.isEmpty(), motivoRechazo.orElse(null), protocolo, puedeCompletarPasos,
+                motivoRechazoNota(pqrs, usuario).orElse(null));
     }
 
     /**
-     * El operador se autoasigna un caso pendiente: pasa a "En atención", queda como responsable
-     * (lo que desbloquea el envío en los casos críticos) y se registra en la bitácora.
+     * El operador se autoasigna un caso pendiente: pasa a "En atención" (o "Atención inmediata" si es crítico),
+     * queda como responsable (lo que desbloquea el envío en los casos críticos) y el cambio de estado
+     * se registra en la bitácora.
      */
     @Transactional
     public Pqrs tomarCaso(Long pqrsId, String correoUsuario) {
@@ -129,11 +134,9 @@ public class PqrsService {
             throw new ReglaNegocioException("Solo se puede tomar un caso pendiente que nadie atiende");
         }
         pqrs.setResponsable(usuario);
-        pqrs.setEstado(pqrs.getPrioridad() == Prioridad.CRITICA
-        ? EstadoPqrs.ATENCION_INMEDIATA
-        : EstadoPqrs.EN_ATENCION);
-        pqrsRepository.save(pqrs);
-        registrar(pqrs, usuario, TipoAccion.CASO_TOMADO);
+        cambiarEstado(pqrs, usuario, pqrs.getPrioridad() == Prioridad.CRITICA
+                ? EstadoPqrs.ATENCION_INMEDIATA
+                : EstadoPqrs.EN_ATENCION, TipoAccion.CASO_TOMADO, null);
         return pqrs;
     }
 
@@ -163,8 +166,22 @@ public class PqrsService {
         mensajeRepository.save(mensaje);
 
         canal.enviar(mensaje);
-        registrar(pqrs, usuario, TipoAccion.RESPUESTA_ENVIADA);
+        registrar(pqrs, usuario, TipoAccion.RESPUESTA_ENVIADA, null, null);
         return mensaje;
+    }
+
+    /**
+     * Agrega una nota interna al caso. Queda solo en la bitácora (visible para el equipo) y no se envía
+     * ni aparece en la conversación con la persona cliente. No cambia el estado del caso.
+     */
+    @Transactional
+    public void agregarNotaInterna(Long pqrsId, String correoUsuario, String nota) {
+        Pqrs pqrs = buscarPorId(pqrsId);
+        Usuario usuario = buscarUsuario(correoUsuario);
+        motivoRechazoNota(pqrs, usuario).ifPresent(motivo -> {
+            throw new ReglaNegocioException(motivo);
+        });
+        registrar(pqrs, usuario, TipoAccion.NOTA_INTERNA, null, nota);
     }
 
     /**
@@ -181,7 +198,24 @@ public class PqrsService {
         if (pasosCompletados(pqrsId).containsKey(paso.name())) {
             throw new ReglaNegocioException("Ese paso ya se completó");
         }
-        registrar(pqrs, usuario, TipoAccion.PASO_PROTOCOLO_COMPLETADO, paso.name());
+        registrar(pqrs, usuario, TipoAccion.PASO_PROTOCOLO_COMPLETADO, paso.name(), null);
+    }
+
+    private Optional<String> motivoRechazoNota(Pqrs pqrs, Usuario usuario) {
+        if (usuario.isBloqueado()) {
+            return Optional.of("El operador está bloqueado y no puede agregar notas");
+        }
+        if (pqrs.getEstado() == EstadoPqrs.RESUELTA) {
+            return Optional.of("El caso ya fue resuelto");
+        }
+        Usuario responsable = pqrs.getResponsable();
+        if (responsable == null) {
+            return Optional.of("Toma el caso antes de agregar notas internas");
+        }
+        if (!responsable.getId().equals(usuario.getId()) && usuario.getRol() != Rol.ADMIN) {
+            return Optional.of("El caso lo atiende otra persona");
+        }
+        return Optional.empty();
     }
 
     private Optional<String> motivoRechazoPaso(Pqrs pqrs, Usuario usuario) {
@@ -265,17 +299,42 @@ public class PqrsService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", correo));
     }
 
-    private void registrar(Pqrs pqrs, Usuario usuario, TipoAccion accion) {
-        registrar(pqrs, usuario, accion, null);
+    /**
+     * Único punto por el que cambia el estado de un caso: valida la nota (si la acción la exige), aplica el
+     * nuevo estado y deja el registro en la bitácora con fecha, usuario, acción y el cambio "anterior → nuevo".
+     */
+    private void cambiarEstado(Pqrs pqrs, Usuario usuario, EstadoPqrs nuevo, TipoAccion accion, String nota) {
+        validarNota(accion, nota);
+        EstadoPqrs anterior = pqrs.getEstado();
+        pqrs.setEstado(nuevo);
+        pqrsRepository.save(pqrs);
+        registrar(pqrs, usuario, accion, anterior.getEtiqueta() + " → " + nuevo.getEtiqueta(), nota);
     }
 
-    private void registrar(Pqrs pqrs, Usuario usuario, TipoAccion accion, String motivo) {
+    /**
+     * Guarda un registro de bitácora. Si la acción exige nota interna ({@link TipoAccion#exigeNotaInterna()})
+     * y no hay, lanza {@link ReglaNegocioException} sin guardar nada. Visible para las pruebas del paquete.
+     */
+    void registrar(Pqrs pqrs, Usuario usuario, TipoAccion accion, String motivo, String nota) {
+        validarNota(accion, nota);
+        String notaLimpia = nota == null || nota.isBlank() ? null : nota.strip();
         RegistroBitacora registro = new RegistroBitacora();
         registro.setMotivo(motivo);
+        registro.setNotasInternas(notaLimpia);
         registro.setFecha(LocalDateTime.now(reloj));
         registro.setAccion(accion);
         registro.setPqrs(pqrs);
         registro.setUsuario(usuario);
         bitacoraRepository.save(registro);
+    }
+
+    private void validarNota(TipoAccion accion, String nota) {
+        boolean hayNota = nota != null && !nota.isBlank();
+        if (accion.exigeNotaInterna() && !hayNota) {
+            throw new ReglaNegocioException("La nota interna es obligatoria para esta acción");
+        }
+        if (hayNota && nota.strip().length() > LARGO_MAXIMO_NOTA) {
+            throw new ReglaNegocioException("La nota interna no puede superar " + LARGO_MAXIMO_NOTA + " caracteres");
+        }
     }
 }
