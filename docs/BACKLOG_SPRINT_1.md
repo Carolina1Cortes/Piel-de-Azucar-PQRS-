@@ -15,8 +15,8 @@ Cada fila es un issue para crear en el repositorio y vincular al tablero de GitH
 | S1-08 | Bandeja de PQRS de solo lectura (Thymeleaf) | Hecho | `/` lista las PQRS, funciona en el celular |
 | S1-09 | README, convenciones y declaración de IA | Hecho, **completar** | Un solo comando documentado; declaración con la autoría real |
 | S1-10 | Verificar que JaCoCo exige 80 % en `servicios` | Por hacer | `./mvnw verify` falla si baja del 80 % |
-| S1-11 | Reemplazar `tipo_consulta` por la tabla oficial de clasificación | **Por hacer (equipo)** | Las 8 categorías con su prioridad y automatización reales |
-| S1-12 | Verificar festivos de Colombia 2026 y 2027 | **Por hacer (equipo)** | Contrastar `festivo` con el calendario oficial |
+| S1-11 | Reemplazar `tipo_consulta` por la tabla oficial de clasificación | Hecho | Las 8 categorías con su prioridad y automatización reales |
+| S1-12 | Verificar festivos de Colombia 2026 y 2027 | Hecho | Contrastar `festivo` con el calendario oficial |
 | S1-13 | Configurar integración continua y protección de `main` | Por hacer | El PR exige el workflow `CI` en verde y una revisión |
 | S1-14 | Repartir la exposición de la Entrega 4 | Por hacer | Los cinco integrantes intervienen |
 
