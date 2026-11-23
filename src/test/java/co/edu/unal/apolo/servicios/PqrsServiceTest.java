@@ -472,6 +472,46 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
         assertThat(detalle.puedeCompletarPasos()).isFalse();
     }
 
+    @Test
+    void unOperadorBloqueadoNoPuedeCompletarPasos() {
+        Usuario bloqueado = usuario(2L, Rol.OPERADOR, true);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, bloqueado);
+        when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(critica));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(bloqueado));
+
+        assertThatThrownBy(() -> servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El operador está bloqueado y no puede completar el protocolo");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void noSeCompletanPasosDeUnCasoResuelto() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs resuelta = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.RESUELTA, operador);
+        when(pqrsRepository.findByIdConDetalle(2L)).thenReturn(Optional.of(resuelta));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+
+        assertThatThrownBy(() -> servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SUSPENDER_USO))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso ya fue resuelto");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void unAdminSiPuedeCompletarPasosDeUnCasoQueAtiendeUnOperador() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Usuario admin = usuario(1L, Rol.ADMIN, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararPaso(critica, admin);
+
+        servicio.completarPaso(2L, CORREO_OPERADOR, PasoProtocolo.SOLICITAR_FOTOS);
+
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getUsuario()).isSameAs(admin);
+    }
+
     // ---------- ayudas
 
     private void prepararPaso(Pqrs pqrs, Usuario usuario, RegistroBitacora... completados) {

@@ -175,6 +175,8 @@ Ejecutar la verificación completa, incluida la regla de cobertura de JaCoCo:
 ./mvnw verify
 ```
 
+Si en Linux o macOS aparece `Permission denied` al ejecutar `./mvnw`, el script perdió el permiso de ejecución: usa `sh mvnw verify` o `chmod +x mvnw`.
+
 JaCoCo exige al menos un **80 % de cobertura de líneas en el paquete `servicios`**. El informe HTML se genera en:
 
 ```text
