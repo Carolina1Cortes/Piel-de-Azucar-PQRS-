@@ -17,11 +17,11 @@
     <form th:action="@{/simulador}" th:object="${formulario}" method="post" class="formulario">
         <div class="mensaje error" th:if="${#fields.hasGlobalErrors()}" th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
 
-        <label for="nombre">Nombre de la clienta</label>
+        <label for="nombre">Nombre de la persona cliente</label>
         <input id="nombre" type="text" th:field="*{nombre}">
         <p class="error-campo" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">Error</p>
 
-        <label for="correo">Correo de la clienta</label>
+        <label for="correo">Correo de la persona cliente</label>
         <input id="correo" type="email" th:field="*{correo}">
         <p class="error-campo" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}">Error</p>
 

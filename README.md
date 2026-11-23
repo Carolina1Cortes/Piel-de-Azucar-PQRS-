@@ -13,7 +13,7 @@ El objetivo del incremento es permitir que un operador autenticado consulte un c
 ### Funcionalidades implementadas
 
 - **Inicio de sesión** con roles Operador y Admin mediante Spring Security. Las contraseñas se almacenan con hash BCrypt. Las rutas de la aplicación requieren autenticación, excepto las rutas públicas necesarias para el inicio de sesión y los recursos estáticos.
-- **Entrada simulada de correos** (`/simulador`): permite registrar un correo entrante y crear una PQRS con su clienta y mensaje. En el formulario se selecciona manualmente el tipo de consulta; la prioridad se toma de la configuración de ese tipo.
+- **Entrada simulada de correos** (`/simulador`): permite registrar un correo entrante y crear una PQRS con su persona cliente y mensaje. En el formulario se selecciona manualmente el tipo de consulta; la prioridad se toma de la configuración de ese tipo.
 - **Bandeja de casos** con filtros Todos / Críticos y visualización de estado, responsable y plazo en días hábiles.
 - **Cálculo de plazos:** calcula la fecha límite de 15 días hábiles, excluyendo sábados, domingos y los festivos registrados en la tabla `festivo`.
 - **Atención de casos críticos:** cuando un caso crítico no tiene responsable, se muestra el aviso "Automatización pausada" y se bloquea el formulario de respuesta hasta que un operador lo tome.
@@ -26,7 +26,7 @@ El objetivo del incremento es permitir que un operador autenticado consulte un c
 1. Un operador inicia sesión y accede a la bandeja de PQRS.
 2. Un correo se registra mediante el simulador de entrada. El tipo de consulta se selecciona en el formulario y el caso hereda la prioridad configurada para ese tipo.
 3. El sistema calcula la fecha límite de atención y presenta el caso en la bandeja.
-4. El operador abre el detalle y consulta la información de la clienta, la conversación y la bitácora.
+4. El operador abre el detalle y consulta la información de la persona cliente, la conversación y la bitácora.
 5. Si el caso es crítico y no tiene responsable, la aplicación pausa la automatización y exige que un operador lo tome antes de responder.
 6. Al tomarlo, el operador queda como responsable y el caso pasa a estado "En atención".
 7. El operador redacta y envía una respuesta. El mensaje queda guardado en la conversación y la acción se registra en la bitácora.
@@ -118,7 +118,9 @@ Estas credenciales son únicamente para el entorno de desarrollo y demostración
 
 ## Instalación y ejecución
 
-Clona el repositorio y entra en la carpeta del proyecto. Luego ejecuta:
+Clona el repositorio y entra en la carpeta del proyecto. Hay dos formas de ejecutar la aplicación.
+
+### Opción A: en local (VS Code con JDK 21)
 
 ```bash
 ./mvnw spring-boot:run          # Linux / macOS
@@ -127,18 +129,31 @@ mvnw.cmd spring-boot:run        # Windows
 
 Abre <http://localhost:8080> en el navegador.
 
-Para generar el artefacto ejecutable:
+### Opción B: en GitHub Codespaces
+
+1. Abre el repositorio en un Codespace nuevo (el JDK 21 ya viene instalado).
+2. En la terminal ejecuta `./mvnw spring-boot:run`.
+3. Cuando arranque, abre la pestaña **Puertos** de VS Code y haz clic en la URL pública del puerto `8080`. Esa URL (del tipo `https://<nombre>-8080.app.github.dev`) es la dirección de la aplicación en Codespaces: **`localhost:8080` no funciona desde tu navegador en Codespaces**.
+4. Inicia sesión con uno de los [usuarios de prueba](#usuarios-de-prueba).
+
+### Generar el artefacto ejecutable
 
 ```bash
 ./mvnw package
 java -jar target/apolo-0.1.0-SNAPSHOT.jar
 ```
 
-La aplicación utiliza el puerto `8080` de forma predeterminada.
+La aplicación utiliza el puerto `8080` de forma predeterminada. Las fechas y horas (bitácora, mensajes, plazos) se calculan con la hora de Bogotá (`America/Bogota`), sin importar la zona horaria del equipo.
+
+### Canal de mensajería: es un mock
+
+La aplicación **no envía correos reales**. El canal de mensajería es `CanalSimulado`, un mock que deja cada envío en el log de la aplicación. La entrada de correos también es simulada (`/simulador`). El envío real por Gmail quedó fuera del alcance del curso por su complejidad.
 
 ### Consola H2
 
-La consola de desarrollo está disponible en <http://localhost:8080/h2-console>.
+> **Solo disponible si la aplicación se inicia en local** (VS Code con JDK 21). En Codespaces la dirección de la aplicación es otra (la URL de la pestaña Puertos) y la consola H2 no es accesible.
+
+En local, la consola de desarrollo está disponible en <http://localhost:8080/h2-console>.
 
 - **JDBC URL:** `jdbc:h2:file:./data/apolo`
 - **Usuario:** `sa`
@@ -204,7 +219,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 ### Limitaciones conocidas
 
 - **Clasificación manual en el simulador:** el tipo de consulta se selecciona en el formulario; `ClasificacionService` ya clasifica por palabras clave (columna `tipo_consulta.palabras_clave`, sin tildes ni mayúsculas, coincidencia por inicio de palabra) y deja el caso en "Por clasificar manualmente" si nada coincide, pero aún no está conectado al simulador. Las palabras clave de `data.sql` son provisionales y deben validarse con la dueña del negocio.
-- **Canal de mensajería:** `CanalSimulado` registra los envíos en el log; no se envían correos reales. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
+- **Canal de mensajería (mock):** `CanalSimulado` es un mock: registra los envíos en el log y no se envían correos reales. Esto es una decisión del equipo (el envío real por Gmail se descartó por su complejidad), no un error. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
 - **Plantillas:** existen datos y entidades para plantillas de respuesta, pero todavía no se sugiere una plantilla automáticamente según palabras clave.
 - **Gestión de casos:** escalar, delegar y resolver casos desde la interfaz están fuera del alcance de este incremento.
 - **Administración de operadores:** el bloqueo de usuarios está contemplado en la lógica, pero no existe una pantalla para administrarlo.

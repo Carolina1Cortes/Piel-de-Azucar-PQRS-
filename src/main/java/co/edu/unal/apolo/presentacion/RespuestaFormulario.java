@@ -3,7 +3,7 @@ package co.edu.unal.apolo.presentacion;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Datos del formulario para responder a la clienta. Solo se valida el formato; las reglas viven en el servicio. */
+/** Datos del formulario para responder a la persona cliente. Solo se valida el formato; las reglas viven en el servicio. */
 public class RespuestaFormulario {
 
     @Size(max = 250, message = "El asunto no puede superar 250 caracteres")

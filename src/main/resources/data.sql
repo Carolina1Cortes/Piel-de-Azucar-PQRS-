@@ -39,7 +39,7 @@ MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, aut
     (17, 'Por clasificar manualmente', 'POR_CLASIFICAR', 'MEDIA', 'ATENCION_HUMANA', NULL);
 
 MERGE INTO plantilla_respuesta (id, nombre, asunto, cuerpo, palabras_clave, tipo_consulta_id, activa) KEY (id) VALUES
-    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos atentas.', 'pedido,estado,orden', 1, TRUE),
+    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos pendientes.', 'pedido,estado,orden', 1, TRUE),
     (2, 'Modo de uso', 'Cómo usar tu producto', 'Hola {nombre}, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'uso,aplicar,rutina,modo', 5, TRUE),
     (3, 'Solicitud de cambio o devolución', 'Tu solicitud de cambio o devolución', 'Hola {nombre}, recibimos tu solicitud. Para continuar, cuéntanos el número de pedido y envíanos una foto del producto.', 'cambio,devolucion,devolver', 9, TRUE),
     (4, 'Agradecimiento por sugerencia o felicitación', '¡Gracias por escribirnos!', 'Hola {nombre}, gracias por tu mensaje. Lo compartiremos con todo el equipo de Piel de Azúcar.', 'gracias,felicitacion,sugerencia', 16, TRUE);
@@ -60,7 +60,7 @@ MERGE INTO mensaje (id, pqrs_id, fecha, asunto, cuerpo, direccion, automatico, a
     (3, 3, '2026-10-14 08:00:00', '¿Cómo uso el ácido hialurónico?', 'Buenos días, ¿cómo debo aplicar el ácido hialurónico?', 'ENTRANTE', FALSE, NULL),
     (4, 4, '2026-10-13 10:00:00', 'Quiero devolver mi crema hidratante', 'Compré la crema hidratante y no me funcionó, quisiera devolverla.', 'ENTRANTE', FALSE, NULL),
     (5, 5, '2026-10-09 11:00:00', 'Me cobraron dos veces mi pedido', 'Veo dos cargos iguales en mi tarjeta por el mismo pedido.', 'ENTRANTE', FALSE, NULL),
-    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlas, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
+    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlos, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
     (7, 7, '2026-09-28 14:30:00', 'Mi pedido llegó incompleto', 'Pedí tres productos y solo llegaron dos.', 'ENTRANTE', FALSE, NULL),
     (8, 8, '2026-10-20 12:10:00', 'Queja por mal trato en la línea de atención', 'Me atendieron de forma muy grosera cuando llamé a preguntar por mi pedido.', 'ENTRANTE', FALSE, NULL),
     (9, 3, '2026-10-14 08:02:00', 'Cómo usar tu producto', 'Hola Daniela, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'SALIENTE', TRUE, NULL),

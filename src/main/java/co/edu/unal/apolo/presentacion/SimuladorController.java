@@ -17,7 +17,7 @@ import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.servicios.EntradaSimuladaService;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
 
-/** Simula la llegada de un correo de una clienta (no requiere internet) y lleva al caso recién creado. */
+/** Simula la llegada de un correo de una persona cliente (no requiere internet) y lleva al caso recién creado. */
 @Controller
 @RequestMapping("/simulador")
 public class SimuladorController {
