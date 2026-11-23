@@ -32,6 +32,10 @@ public class TipoConsulta {
     @Column(nullable = false, length = 30)
     private TipoAutomatizacion automatizacion;
 
+    /** Palabras clave separadas por coma que usa la clasificación automática (E5-07). Puede ser nulo o vacío. */
+    @Column(nullable = true, length = 1000)
+    private String palabrasClave;
+
     public Long getId() {
         return id;
     }
@@ -70,5 +74,13 @@ public class TipoConsulta {
 
     public void setAutomatizacion(TipoAutomatizacion automatizacion) {
         this.automatizacion = automatizacion;
+    }
+
+    public String getPalabrasClave() {
+        return palabrasClave;
+    }
+
+    public void setPalabrasClave(String palabrasClave) {
+        this.palabrasClave = palabrasClave;
     }
 }

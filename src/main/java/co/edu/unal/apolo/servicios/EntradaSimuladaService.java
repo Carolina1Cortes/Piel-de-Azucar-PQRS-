@@ -24,7 +24,7 @@ import co.edu.unal.apolo.persistencia.PqrsRepository;
 import co.edu.unal.apolo.persistencia.TipoConsultaRepository;
 
 /**
- * Entrada simulada de correos (CU-01 sin internet): crea una PQRS nueva con su clienta, su mensaje entrante,
+ * Entrada simulada de correos (CU-01 sin internet): crea una PQRS nueva con su persona cliente, su mensaje entrante,
  * canal Gmail, la prioridad por defecto del tipo de consulta y la fecha límite en días hábiles.
  */
 @Service
@@ -63,10 +63,10 @@ public class EntradaSimuladaService {
     }
 
     @Transactional
-    public Pqrs registrarCorreoEntrante(String nombreClienta, String correoClienta, String asunto, String cuerpo,
+    public Pqrs registrarCorreoEntrante(String nombreCliente, String correoCliente, String asunto, String cuerpo,
                                         Long tipoConsultaId) {
-        exigirTexto(nombreClienta, "El nombre de la clienta es obligatorio");
-        exigirTexto(correoClienta, "El correo de la clienta es obligatorio");
+        exigirTexto(nombreCliente, "El nombre de la persona cliente es obligatorio");
+        exigirTexto(correoCliente, "El correo de la persona cliente es obligatorio");
         exigirTexto(asunto, "El asunto es obligatorio");
         exigirTexto(cuerpo, "El mensaje es obligatorio");
         if (tipoConsultaId == null) {
@@ -75,13 +75,13 @@ public class EntradaSimuladaService {
         TipoConsulta tipo = tipoConsultaRepository.findById(tipoConsultaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Tipo de consulta", tipoConsultaId));
 
-        String correo = correoClienta.strip().toLowerCase();
+        String correo = correoCliente.strip().toLowerCase();
         Cliente cliente = clienteRepository.findByCorreo(correo).orElseGet(() -> {
-            Cliente nueva = new Cliente();
-            nueva.setNombre(nombreClienta.strip());
-            nueva.setCorreo(correo);
-            clienteRepository.save(nueva);
-            return nueva;
+            Cliente nuevo = new Cliente();
+            nuevo.setNombre(nombreCliente.strip());
+            nuevo.setCorreo(correo);
+            clienteRepository.save(nuevo);
+            return nuevo;
         });
 
         LocalDateTime ahora = LocalDateTime.now(reloj);
@@ -124,7 +124,7 @@ public class EntradaSimuladaService {
         return pqrs;
     }
 
-    /** Radicado visible para la clienta: PQRS-AAAA-NNNNNN (año de llegada e id con ceros a la izquierda). */
+    /** Radicado visible para la persona cliente: PQRS-AAAA-NNNNNN (año de llegada e id con ceros a la izquierda). */
     static String generarRadicado(int anio, long id) {
         return String.format("PQRS-%d-%06d", anio, id);
     }

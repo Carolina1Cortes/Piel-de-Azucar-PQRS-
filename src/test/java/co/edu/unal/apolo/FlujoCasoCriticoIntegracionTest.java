@@ -98,7 +98,7 @@ class FlujoCasoCriticoIntegracionTest {
         mockMvc.perform(get("/pqrs/2").with(operador))
                 .andExpect(content().string(containsString("Protocolo crítico")))
                 .andExpect(content().string(containsString("Paso del protocolo completado")))
-                .andExpect(content().string(containsString("✔ Pedir a la clienta que suspenda el uso del producto")));
+                .andExpect(content().string(containsString("✔ Pedir a la persona cliente que suspenda el uso del producto")));
     }
 
     @Test

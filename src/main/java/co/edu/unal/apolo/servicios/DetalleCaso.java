@@ -31,7 +31,7 @@ public record DetalleCaso(
         List<PasoVista> protocolo,
         boolean puedeCompletarPasos) {
 
-    /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la clienta y las respuestas automáticas. */
+    /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas. */
     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
                                boolean automatico, String autor) {
     }

@@ -31,8 +31,10 @@ CREATE TABLE IF NOT EXISTS tipo_consulta (
     categoria             VARCHAR(40)  NOT NULL,
     prioridad_por_defecto VARCHAR(30)  NOT NULL,
     automatizacion        VARCHAR(30)  NOT NULL,
+    palabras_clave        VARCHAR(1000),
     CONSTRAINT ck_tipo_categoria CHECK (categoria IN ('PEDIDOS', 'ENVIOS_ENTREGAS', 'PRODUCTOS_USO', 'REACCIONES',
-        'CAMBIOS_DEVOLUCIONES', 'PAGOS_FACTURACION', 'ATENCION_QUEJAS', 'SUGERENCIAS_FELICITACIONES')),
+        'CAMBIOS_DEVOLUCIONES', 'PAGOS_FACTURACION', 'ATENCION_QUEJAS', 'SUGERENCIAS_FELICITACIONES',
+        'POR_CLASIFICAR')),
     CONSTRAINT ck_tipo_prioridad CHECK (prioridad_por_defecto IN ('BAJA', 'MEDIA', 'ALTA', 'CRITICA')),
     CONSTRAINT ck_tipo_automatizacion CHECK (automatizacion IN ('AUTOMATICA', 'ASISTIDA', 'ATENCION_HUMANA', 'REGISTRO'))
 );
@@ -134,3 +136,9 @@ ALTER TABLE registro_bitacora ADD CONSTRAINT ck_bitacora_accion CHECK (accion IN
     'ESCALADA', 'DELEGADA', 'PRIORIDAD_CAMBIADA', 'OPERADOR_BLOQUEADO', 'CASO_RESUELTO', 'PASO_PROTOCOLO_COMPLETADO'));
 ALTER TABLE pqrs DROP CONSTRAINT IF EXISTS ck_pqrs_estado;
 ALTER TABLE pqrs ADD CONSTRAINT ck_pqrs_estado CHECK (estado IN ('PENDIENTE', 'EN_ATENCION', 'ATENCION_INMEDIATA', 'ESCALADA', 'DELEGADA', 'RESUELTA'));
+-- E5-07: palabras clave por tipo de consulta y categoría para los casos que no se pueden clasificar solos
+ALTER TABLE tipo_consulta ADD COLUMN IF NOT EXISTS palabras_clave VARCHAR(1000);
+ALTER TABLE tipo_consulta DROP CONSTRAINT IF EXISTS ck_tipo_categoria;
+ALTER TABLE tipo_consulta ADD CONSTRAINT ck_tipo_categoria CHECK (categoria IN ('PEDIDOS', 'ENVIOS_ENTREGAS',
+    'PRODUCTOS_USO', 'REACCIONES', 'CAMBIOS_DEVOLUCIONES', 'PAGOS_FACTURACION', 'ATENCION_QUEJAS',
+    'SUGERENCIAS_FELICITACIONES', 'POR_CLASIFICAR'));
