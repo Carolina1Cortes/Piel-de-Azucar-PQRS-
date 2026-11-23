@@ -108,7 +108,7 @@ class FlujoCasoCriticoIntegracionTest {
                         .param("correo", "ana.torres@example.com")
                         .param("asunto", "Alergia con la crema nocturna")
                         .param("cuerpo", "Me salieron ronchas después de usarla.")
-                        .param("tipoConsultaId", "7"))
+                        .param("tipoConsultaId", "18"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/pqrs/*"))
                 .andReturn();
