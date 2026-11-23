@@ -18,7 +18,9 @@ import co.edu.unal.apolo.dominio.Categoria;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
 import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.Prioridad;
+import co.edu.unal.apolo.dominio.RegistroBitacora;
 import co.edu.unal.apolo.dominio.Rol;
+import co.edu.unal.apolo.dominio.TipoAccion;
 import co.edu.unal.apolo.dominio.TipoAutomatizacion;
 
 /**
@@ -180,6 +182,22 @@ class RepositoriosTest {
 
         assertThat(bitacoraRepository.findByPqrsIdOrderByFechaAsc(pqrsId))
                 .extracting(r -> r.getAccion().name()).containsExactly("CASO_TOMADO", "ESCALADA");
+    }
+
+    @Test
+    void guardaUnaNotaInternaEnLaBitacoraConLaAccionNotaInterna() {
+        Pqrs pqrs = pqrsRepository.findByIdExterno("gmail-msg-005").orElseThrow();
+        RegistroBitacora registro = new RegistroBitacora();
+        registro.setFecha(LocalDateTime.of(2026, 11, 23, 10, 0));
+        registro.setAccion(TipoAccion.NOTA_INTERNA);
+        registro.setNotasInternas("Confirmar el lote con bodega.");
+        registro.setPqrs(pqrs);
+        registro.setUsuario(usuarioRepository.findByCorreo("operador1@pieldeazucar.co").orElseThrow());
+
+        bitacoraRepository.saveAndFlush(registro);
+
+        assertThat(bitacoraRepository.findByPqrsIdAndAccionOrderByFechaAsc(pqrs.getId(), TipoAccion.NOTA_INTERNA))
+                .extracting(RegistroBitacora::getNotasInternas).containsExactly("Confirmar el lote con bodega.");
     }
 
     @Test
