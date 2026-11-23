@@ -10,7 +10,8 @@ public enum Categoria {
     CAMBIOS_DEVOLUCIONES("Cambios, devoluciones y garantías"),
     PAGOS_FACTURACION("Pagos y facturación"),
     ATENCION_QUEJAS("Atención al cliente y quejas"),
-    SUGERENCIAS_FELICITACIONES("Sugerencias y felicitaciones");
+    SUGERENCIAS_FELICITACIONES("Sugerencias y felicitaciones"),
+    POR_CLASIFICAR("Por clasificar");
 
     private final String etiqueta;
 

@@ -19,23 +19,24 @@ MERGE INTO cliente (id, nombre, correo, telefono) KEY (id) VALUES
     (6, 'Natalia Prieto', 'natalia.prieto@example.com', NULL);
 
 -- PROVISIONAL: reconstruido del contexto. Reemplazar por la tabla oficial de clasificación entregada por el equipo.
-MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, automatizacion) KEY (id) VALUES
-    (1, 'Estado de un pedido', 'PEDIDOS', 'MEDIA', 'AUTOMATICA'),
-    (2, 'Modificar o cancelar un pedido', 'PEDIDOS', 'ALTA', 'ASISTIDA'),
-    (3, 'Seguimiento de un envío', 'ENVIOS_ENTREGAS', 'MEDIA', 'AUTOMATICA'),
-    (4, 'Pedido incompleto, dañado o no entregado', 'ENVIOS_ENTREGAS', 'ALTA', 'ATENCION_HUMANA'),
-    (5, 'Modo de uso de un producto', 'PRODUCTOS_USO', 'BAJA', 'AUTOMATICA'),
-    (6, 'Recomendación según tipo de piel', 'PRODUCTOS_USO', 'MEDIA', 'ASISTIDA'),
-    (7, 'Enrojecimiento, irritación o alergia', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA'),
-    (8, 'Molestia tras el uso de un producto', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA'),
-    (9, 'Solicitud de cambio o devolución', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ASISTIDA'),
-    (10, 'Garantía por producto defectuoso', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ATENCION_HUMANA'),
-    (11, 'Métodos de pago', 'PAGOS_FACTURACION', 'BAJA', 'AUTOMATICA'),
-    (12, 'Cobro duplicado o error en factura', 'PAGOS_FACTURACION', 'ALTA', 'ATENCION_HUMANA'),
-    (13, 'Queja por el servicio', 'ATENCION_QUEJAS', 'ALTA', 'ATENCION_HUMANA'),
-    (14, 'Información general y horarios', 'ATENCION_QUEJAS', 'BAJA', 'AUTOMATICA'),
-    (15, 'Sugerencia', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO'),
-    (16, 'Felicitación', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO');
+MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, automatizacion, palabras_clave) KEY (id) VALUES
+    (1, 'Estado de un pedido', 'PEDIDOS', 'MEDIA', 'AUTOMATICA', 'estado de mi pedido,estado del pedido,mi pedido,numero de pedido,estado de la orden'),
+    (2, 'Modificar o cancelar un pedido', 'PEDIDOS', 'ALTA', 'ASISTIDA', 'cancelar,cancelacion,modificar mi pedido,cambiar la direccion,cambiar mi direccion,agregar al pedido'),
+    (3, 'Seguimiento de un envío', 'ENVIOS_ENTREGAS', 'MEDIA', 'AUTOMATICA', 'cuando llega,no llega,seguimiento,rastreo,guia,envio,transportadora,despacho,tracking'),
+    (4, 'Pedido incompleto, dañado o no entregado', 'ENVIOS_ENTREGAS', 'ALTA', 'ATENCION_HUMANA', 'incompleto,danado,roto,faltante,falto,equivocado,no llego,no recibi,solo llegaron'),
+    (5, 'Modo de uso de un producto', 'PRODUCTOS_USO', 'BAJA', 'AUTOMATICA', 'modo de uso,como uso,como usar,como aplico,como debo aplicar,cuantas veces,rutina,instrucciones'),
+    (6, 'Recomendación según tipo de piel', 'PRODUCTOS_USO', 'MEDIA', 'ASISTIDA', 'recomienda,recomendacion,recomendar,tipo de piel,piel grasa,piel seca,piel mixta,piel sensible'),
+    (7, 'Enrojecimiento, irritación o alergia', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA', 'enroj,irrita,alerg,ardor,me arde,picazon,sarpullido,ronchas,hinchaz,inflamaci,quemadura,dermatitis,brote'),
+    (8, 'Molestia tras el uso de un producto', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA', 'molestia,malestar,me hizo mal,me siento mal,resequedad,reseca,descama,tirante,me pico,me ardio'),
+    (9, 'Solicitud de cambio o devolución', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ASISTIDA', 'cambio,cambiar,devol,reembols,no me funciono,no me gusto'),
+    (10, 'Garantía por producto defectuoso', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ATENCION_HUMANA', 'garantia,defectuos,defecto,fabrica,vencid,caduc'),
+    (11, 'Métodos de pago', 'PAGOS_FACTURACION', 'BAJA', 'AUTOMATICA', 'metodos de pago,medios de pago,formas de pago,como pago,pse,nequi,daviplata,contraentrega,cuotas'),
+    (12, 'Cobro duplicado o error en factura', 'PAGOS_FACTURACION', 'ALTA', 'ATENCION_HUMANA', 'cobr,cargo,doble cobro,dos veces,factura,descontaron,debitaron'),
+    (13, 'Queja por el servicio', 'ATENCION_QUEJAS', 'ALTA', 'ATENCION_HUMANA', 'queja,mal trato,maltrato,groser,mala atencion,pesim,inconforme,insatisfech,irrespet,reclamo'),
+    (14, 'Información general y horarios', 'ATENCION_QUEJAS', 'BAJA', 'AUTOMATICA', 'horario,ubicacion,tienda fisica,puntos de venta,sucursal,donde estan,atienden,informacion'),
+    (15, 'Sugerencia', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO', 'sugerenc,sugier,sugerir,deberian,seria bueno,me gustaria que'),
+    (16, 'Felicitación', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO', 'felicit,agradezc,agradec,excelente,me encanto,muy bien'),
+    (17, 'Por clasificar manualmente', 'POR_CLASIFICAR', 'MEDIA', 'ATENCION_HUMANA', NULL);
 
 MERGE INTO plantilla_respuesta (id, nombre, asunto, cuerpo, palabras_clave, tipo_consulta_id, activa) KEY (id) VALUES
     (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos pendientes.', 'pedido,estado,orden', 1, TRUE),

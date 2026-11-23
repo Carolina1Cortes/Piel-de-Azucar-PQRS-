@@ -209,7 +209,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 | Registro de acciones en bitácora | Implementado |
 | Radicado y confirmación de recepción | Implementada |
 | Lista de chequeo del protocolo crítico | Implementada |
-| Clasificación automática por palabras clave | Pendiente |
+| Clasificación automática por palabras clave (`ClasificacionService`) | Implementada como servicio (E5-07); falta conectarla al simulador (E5-08) |
 | Sugerencia de plantillas por palabras clave | Pendiente |
 | Envío real mediante Gmail (`GmailCanal`) | Pendiente |
 | Escalar y delegar casos desde la interfaz | Pendiente |
@@ -218,7 +218,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 
 ### Limitaciones conocidas
 
-- **Clasificación manual:** el tipo de consulta se selecciona en el simulador. Todavía no se clasifica automáticamente a partir del contenido del correo.
+- **Clasificación manual en el simulador:** el tipo de consulta se selecciona en el formulario; `ClasificacionService` ya clasifica por palabras clave (columna `tipo_consulta.palabras_clave`, sin tildes ni mayúsculas, coincidencia por inicio de palabra) y deja el caso en "Por clasificar manualmente" si nada coincide, pero aún no está conectado al simulador. Las palabras clave de `data.sql` son provisionales y deben validarse con la dueña del negocio.
 - **Canal de mensajería (mock):** `CanalSimulado` es un mock: registra los envíos en el log y no se envían correos reales. Esto es una decisión del equipo (el envío real por Gmail se descartó por su complejidad), no un error. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
 - **Plantillas:** existen datos y entidades para plantillas de respuesta, pero todavía no se sugiere una plantilla automáticamente según palabras clave.
 - **Gestión de casos:** escalar, delegar y resolver casos desde la interfaz están fuera del alcance de este incremento.
