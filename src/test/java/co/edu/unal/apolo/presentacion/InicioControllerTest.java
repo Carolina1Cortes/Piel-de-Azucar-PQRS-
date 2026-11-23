@@ -19,6 +19,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import co.edu.unal.apolo.dominio.Canal;
 import co.edu.unal.apolo.dominio.Categoria;
 import co.edu.unal.apolo.dominio.Cliente;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
@@ -87,6 +88,28 @@ class InicioControllerTest {
                 .andExpect(content().string(containsString("/pqrs/2")));
     }
 
+    @Test
+    void laBandejaMuestraElCanalDeOrigenDeCadaCaso() throws Exception {
+        when(pqrsService.listar(false)).thenReturn(List.of(
+                new ResumenPqrs(pqrs(2L, "Valentina Ortiz", Prioridad.CRITICA, EstadoPqrs.PENDIENTE), 4)));
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<th>Canal</th>")))
+                .andExpect(content().string(containsString("<td>Gmail</td>")));
+    }
+
+    @Test
+    void laBandejaNoFallaSiUnCasoNoTieneCanal() throws Exception {
+        Pqrs sinCanal = pqrs(3L, "Camila Rojas", Prioridad.ALTA, EstadoPqrs.PENDIENTE);
+        sinCanal.setCanal(null);
+        when(pqrsService.listar(false)).thenReturn(List.of(new ResumenPqrs(sinCanal, 2)));
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Camila Rojas")));
+    }
+
     private Pqrs pqrs(Long id, String clienta, Prioridad prioridad, EstadoPqrs estado) {
         Cliente cliente = new Cliente();
         cliente.setNombre(clienta);
@@ -95,6 +118,7 @@ class InicioControllerTest {
         Pqrs pqrs = new Pqrs();
         pqrs.setId(id);
         pqrs.setAsunto("Asunto " + id);
+        pqrs.setCanal(Canal.GMAIL);
         pqrs.setCliente(cliente);
         pqrs.setTipoConsulta(tipo);
         pqrs.setPrioridad(prioridad);
