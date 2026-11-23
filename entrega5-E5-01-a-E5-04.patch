@@ -1,0 +1,523 @@
+From 99888388288b1b085a6eb91463725d63a39a8a47 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 23 Nov 2026 00:28:12 +0000
+Subject: [PATCH] =?UTF-8?q?Aplica=20lenguaje=20neutro,=20hora=20de=20Bogot?=
+ =?UTF-8?q?=C3=A1,=20permiso=20de=20mvnw=20y=20README=20de=20ejecuci=C3=B3?=
+ =?UTF-8?q?n=20(E5-01=20a=20E5-04)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ CONVENCIONES.md                               |  2 +-
+ README.md                                     | 29 ++++++++++++++-----
+ mvnw                                          |  0
+ .../unal/apolo/configuracion/RelojConfig.java | 10 +++++--
+ .../edu/unal/apolo/dominio/PasoProtocolo.java |  2 +-
+ .../apolo/integracion/CanalMensajeria.java    |  4 +--
+ .../unal/apolo/integracion/CanalSimulado.java |  2 +-
+ .../CorreoSimuladoFormulario.java             |  2 +-
+ .../presentacion/RespuestaFormulario.java     |  2 +-
+ .../presentacion/SimuladorController.java     |  2 +-
+ .../edu/unal/apolo/servicios/DetalleCaso.java |  2 +-
+ .../servicios/EntradaSimuladaService.java     | 22 +++++++-------
+ .../edu/unal/apolo/servicios/PqrsService.java |  2 +-
+ src/main/resources/application.properties     |  4 ++-
+ src/main/resources/data.sql                   |  4 +--
+ src/main/resources/templates/caso.html        |  8 ++---
+ src/main/resources/templates/inicio.html      |  4 +--
+ src/main/resources/templates/simulador.html   |  4 +--
+ .../FlujoCasoCriticoIntegracionTest.java      |  2 +-
+ .../apolo/configuracion/RelojConfigTest.java  | 18 ++++++++++++
+ .../presentacion/InicioControllerTest.java    |  6 ++--
+ .../servicios/EntradaSimuladaServiceTest.java |  4 +--
+ 22 files changed, 88 insertions(+), 47 deletions(-)
+ mode change 100644 => 100755 mvnw
+ create mode 100644 src/test/java/co/edu/unal/apolo/configuracion/RelojConfigTest.java
+
+diff --git a/CONVENCIONES.md b/CONVENCIONES.md
+index 733af3a..120fea6 100644
+--- a/CONVENCIONES.md
++++ b/CONVENCIONES.md
+@@ -4,7 +4,7 @@
+ - Dominio, clases, métodos, variables, tablas y columnas en **español sin tildes ni eñes** (`fechaLimite`, `fecha_limite`, `tomarCaso`). Los métodos de Spring Data llevan el nombre en inglés que exige el framework (`findByEstado`).
+ - Clases en `PascalCase`, métodos y atributos en `camelCase`, constantes y valores de enumeración en `MAYUSCULAS_CON_GUION_BAJO`.
+ - Tablas y columnas en `snake_case`, tabla en singular (`pqrs`, `cliente`).
+-- Textos visibles para la usuaria, comentarios y mensajes de commit en español.
++- Textos visibles para quien usa la aplicación, comentarios y mensajes de commit en español.
+ - Interfaces sin prefijo `I`. Implementaciones con nombre propio (`GmailCanal`, `CanalSimulado`).
+ 
+ ## Capas y dependencias
+diff --git a/README.md b/README.md
+index e5bcbd7..a5b7bce 100644
+--- a/README.md
++++ b/README.md
+@@ -13,7 +13,7 @@ El objetivo del incremento es permitir que un operador autenticado consulte un c
+ ### Funcionalidades implementadas
+ 
+ - **Inicio de sesión** con roles Operador y Admin mediante Spring Security. Las contraseñas se almacenan con hash BCrypt. Las rutas de la aplicación requieren autenticación, excepto las rutas públicas necesarias para el inicio de sesión y los recursos estáticos.
+-- **Entrada simulada de correos** (`/simulador`): permite registrar un correo entrante y crear una PQRS con su clienta y mensaje. En el formulario se selecciona manualmente el tipo de consulta; la prioridad se toma de la configuración de ese tipo.
++- **Entrada simulada de correos** (`/simulador`): permite registrar un correo entrante y crear una PQRS con su persona cliente y mensaje. En el formulario se selecciona manualmente el tipo de consulta; la prioridad se toma de la configuración de ese tipo.
+ - **Bandeja de casos** con filtros Todos / Críticos y visualización de estado, responsable y plazo en días hábiles.
+ - **Cálculo de plazos:** calcula la fecha límite de 15 días hábiles, excluyendo sábados, domingos y los festivos registrados en la tabla `festivo`.
+ - **Atención de casos críticos:** cuando un caso crítico no tiene responsable, se muestra el aviso "Automatización pausada" y se bloquea el formulario de respuesta hasta que un operador lo tome.
+@@ -26,7 +26,7 @@ El objetivo del incremento es permitir que un operador autenticado consulte un c
+ 1. Un operador inicia sesión y accede a la bandeja de PQRS.
+ 2. Un correo se registra mediante el simulador de entrada. El tipo de consulta se selecciona en el formulario y el caso hereda la prioridad configurada para ese tipo.
+ 3. El sistema calcula la fecha límite de atención y presenta el caso en la bandeja.
+-4. El operador abre el detalle y consulta la información de la clienta, la conversación y la bitácora.
++4. El operador abre el detalle y consulta la información de la persona cliente, la conversación y la bitácora.
+ 5. Si el caso es crítico y no tiene responsable, la aplicación pausa la automatización y exige que un operador lo tome antes de responder.
+ 6. Al tomarlo, el operador queda como responsable y el caso pasa a estado "En atención".
+ 7. El operador redacta y envía una respuesta. El mensaje queda guardado en la conversación y la acción se registra en la bitácora.
+@@ -118,7 +118,9 @@ Estas credenciales son únicamente para el entorno de desarrollo y demostración
+ 
+ ## Instalación y ejecución
+ 
+-Clona el repositorio y entra en la carpeta del proyecto. Luego ejecuta:
++Clona el repositorio y entra en la carpeta del proyecto. Hay dos formas de ejecutar la aplicación.
++
++### Opción A: en local (VS Code con JDK 21)
+ 
+ ```bash
+ ./mvnw spring-boot:run          # Linux / macOS
+@@ -127,18 +129,31 @@ mvnw.cmd spring-boot:run        # Windows
+ 
+ Abre <http://localhost:8080> en el navegador.
+ 
+-Para generar el artefacto ejecutable:
++### Opción B: en GitHub Codespaces
++
++1. Abre el repositorio en un Codespace nuevo (el JDK 21 ya viene instalado).
++2. En la terminal ejecuta `./mvnw spring-boot:run`.
++3. Cuando arranque, abre la pestaña **Puertos** de VS Code y haz clic en la URL pública del puerto `8080`. Esa URL (del tipo `https://<nombre>-8080.app.github.dev`) es la dirección de la aplicación en Codespaces: **`localhost:8080` no funciona desde tu navegador en Codespaces**.
++4. Inicia sesión con uno de los [usuarios de prueba](#usuarios-de-prueba).
++
++### Generar el artefacto ejecutable
+ 
+ ```bash
+ ./mvnw package
+ java -jar target/apolo-0.1.0-SNAPSHOT.jar
+ ```
+ 
+-La aplicación utiliza el puerto `8080` de forma predeterminada.
++La aplicación utiliza el puerto `8080` de forma predeterminada. Las fechas y horas (bitácora, mensajes, plazos) se calculan con la hora de Bogotá (`America/Bogota`), sin importar la zona horaria del equipo.
++
++### Canal de mensajería: es un mock
++
++La aplicación **no envía correos reales**. El canal de mensajería es `CanalSimulado`, un mock que deja cada envío en el log de la aplicación. La entrada de correos también es simulada (`/simulador`). El envío real por Gmail quedó fuera del alcance del curso por su complejidad.
+ 
+ ### Consola H2
+ 
+-La consola de desarrollo está disponible en <http://localhost:8080/h2-console>.
++> **Solo disponible si la aplicación se inicia en local** (VS Code con JDK 21). En Codespaces la dirección de la aplicación es otra (la URL de la pestaña Puertos) y la consola H2 no es accesible.
++
++En local, la consola de desarrollo está disponible en <http://localhost:8080/h2-console>.
+ 
+ - **JDBC URL:** `jdbc:h2:file:./data/apolo`
+ - **Usuario:** `sa`
+@@ -204,7 +219,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
+ ### Limitaciones conocidas
+ 
+ - **Clasificación manual:** el tipo de consulta se selecciona en el simulador. Todavía no se clasifica automáticamente a partir del contenido del correo.
+-- **Canal de mensajería:** `CanalSimulado` registra los envíos en el log; no se envían correos reales. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
++- **Canal de mensajería (mock):** `CanalSimulado` es un mock: registra los envíos en el log y no se envían correos reales. Esto es una decisión del equipo (el envío real por Gmail se descartó por su complejidad), no un error. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
+ - **Plantillas:** existen datos y entidades para plantillas de respuesta, pero todavía no se sugiere una plantilla automáticamente según palabras clave.
+ - **Gestión de casos:** escalar, delegar y resolver casos desde la interfaz están fuera del alcance de este incremento.
+ - **Administración de operadores:** el bloqueo de usuarios está contemplado en la lógica, pero no existe una pantalla para administrarlo.
+diff --git a/mvnw b/mvnw
+old mode 100644
+new mode 100755
+diff --git a/src/main/java/co/edu/unal/apolo/configuracion/RelojConfig.java b/src/main/java/co/edu/unal/apolo/configuracion/RelojConfig.java
+index 781f5d7..fdde008 100644
+--- a/src/main/java/co/edu/unal/apolo/configuracion/RelojConfig.java
++++ b/src/main/java/co/edu/unal/apolo/configuracion/RelojConfig.java
+@@ -1,16 +1,22 @@
+ package co.edu.unal.apolo.configuracion;
+ 
+ import java.time.Clock;
++import java.time.ZoneId;
+ 
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+-/** Reloj inyectable: los servicios lo usan para "hoy" y "ahora", y las pruebas lo reemplazan por uno fijo. */
++/**
++ * Reloj inyectable: los servicios lo usan para "hoy" y "ahora", y las pruebas lo reemplazan por uno fijo.
++ * Usa siempre la hora de Bogotá, sin depender de la zona horaria del equipo (en un Codespace es UTC).
++ */
+ @Configuration
+ public class RelojConfig {
+ 
++    public static final ZoneId ZONA_BOGOTA = ZoneId.of("America/Bogota");
++
+     @Bean
+     public Clock reloj() {
+-        return Clock.systemDefaultZone();
++        return Clock.system(ZONA_BOGOTA);
+     }
+ }
+diff --git a/src/main/java/co/edu/unal/apolo/dominio/PasoProtocolo.java b/src/main/java/co/edu/unal/apolo/dominio/PasoProtocolo.java
+index 4064a54..830b292 100644
+--- a/src/main/java/co/edu/unal/apolo/dominio/PasoProtocolo.java
++++ b/src/main/java/co/edu/unal/apolo/dominio/PasoProtocolo.java
+@@ -3,7 +3,7 @@ package co.edu.unal.apolo.dominio;
+ /** Pasos del protocolo de seguridad de un caso crítico, en el orden en que se muestran. */
+ public enum PasoProtocolo {
+ 
+-    SUSPENDER_USO("Pedir a la clienta que suspenda el uso del producto"),
++    SUSPENDER_USO("Pedir a la persona cliente que suspenda el uso del producto"),
+     SOLICITAR_FOTOS("Solicitar fotos del producto y de la reacción"),
+     SOLICITAR_LOTE("Solicitar el número de lote del producto"),
+     RECOPILAR_SINTOMAS("Recopilar los síntomas y desde cuándo aparecieron");
+diff --git a/src/main/java/co/edu/unal/apolo/integracion/CanalMensajeria.java b/src/main/java/co/edu/unal/apolo/integracion/CanalMensajeria.java
+index 12dc0de..3833326 100644
+--- a/src/main/java/co/edu/unal/apolo/integracion/CanalMensajeria.java
++++ b/src/main/java/co/edu/unal/apolo/integracion/CanalMensajeria.java
+@@ -3,11 +3,11 @@ package co.edu.unal.apolo.integracion;
+ import co.edu.unal.apolo.dominio.Mensaje;
+ 
+ /**
+- * Puerto de salida hacia el canal por el que se contesta a la clienta.
++ * Puerto de salida hacia el canal por el que se contesta a la persona cliente.
+  * Implementaciones: GmailCanal (real, por SMTP) y CanalSimulado (sin internet).
+  */
+ public interface CanalMensajeria {
+ 
+-    /** Envía el mensaje saliente a la clienta de la PQRS asociada. */
++    /** Envía el mensaje saliente a la persona cliente de la PQRS asociada. */
+     void enviar(Mensaje mensaje);
+ }
+diff --git a/src/main/java/co/edu/unal/apolo/integracion/CanalSimulado.java b/src/main/java/co/edu/unal/apolo/integracion/CanalSimulado.java
+index a019ff7..d078110 100644
+--- a/src/main/java/co/edu/unal/apolo/integracion/CanalSimulado.java
++++ b/src/main/java/co/edu/unal/apolo/integracion/CanalSimulado.java
+@@ -18,7 +18,7 @@ public class CanalSimulado implements CanalMensajeria {
+ 
+     @Override
+     public void enviar(Mensaje mensaje) {
+-        LOG.info("[CANAL SIMULADO] Mensaje '{}' enviado a la clienta de la PQRS {}",
++        LOG.info("[CANAL SIMULADO] Mensaje '{}' enviado a la persona cliente de la PQRS {}",
+                 mensaje.getAsunto(), mensaje.getPqrs().getId());
+     }
+ }
+diff --git a/src/main/java/co/edu/unal/apolo/presentacion/CorreoSimuladoFormulario.java b/src/main/java/co/edu/unal/apolo/presentacion/CorreoSimuladoFormulario.java
+index c0cfd5d..198603b 100644
+--- a/src/main/java/co/edu/unal/apolo/presentacion/CorreoSimuladoFormulario.java
++++ b/src/main/java/co/edu/unal/apolo/presentacion/CorreoSimuladoFormulario.java
+@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
+ import jakarta.validation.constraints.NotNull;
+ import jakarta.validation.constraints.Size;
+ 
+-/** Datos del formulario que simula la llegada de un correo de una clienta. */
++/** Datos del formulario que simula la llegada de un correo de una persona cliente. */
+ public class CorreoSimuladoFormulario {
+ 
+     @NotBlank(message = "El nombre es obligatorio")
+diff --git a/src/main/java/co/edu/unal/apolo/presentacion/RespuestaFormulario.java b/src/main/java/co/edu/unal/apolo/presentacion/RespuestaFormulario.java
+index bd81754..6707e0e 100644
+--- a/src/main/java/co/edu/unal/apolo/presentacion/RespuestaFormulario.java
++++ b/src/main/java/co/edu/unal/apolo/presentacion/RespuestaFormulario.java
+@@ -3,7 +3,7 @@ package co.edu.unal.apolo.presentacion;
+ import jakarta.validation.constraints.NotBlank;
+ import jakarta.validation.constraints.Size;
+ 
+-/** Datos del formulario para responder a la clienta. Solo se valida el formato; las reglas viven en el servicio. */
++/** Datos del formulario para responder a la persona cliente. Solo se valida el formato; las reglas viven en el servicio. */
+ public class RespuestaFormulario {
+ 
+     @Size(max = 250, message = "El asunto no puede superar 250 caracteres")
+diff --git a/src/main/java/co/edu/unal/apolo/presentacion/SimuladorController.java b/src/main/java/co/edu/unal/apolo/presentacion/SimuladorController.java
+index 376b238..28ede48 100644
+--- a/src/main/java/co/edu/unal/apolo/presentacion/SimuladorController.java
++++ b/src/main/java/co/edu/unal/apolo/presentacion/SimuladorController.java
+@@ -17,7 +17,7 @@ import co.edu.unal.apolo.dominio.Pqrs;
+ import co.edu.unal.apolo.servicios.EntradaSimuladaService;
+ import co.edu.unal.apolo.servicios.ReglaNegocioException;
+ 
+-/** Simula la llegada de un correo de una clienta (no requiere internet) y lleva al caso recién creado. */
++/** Simula la llegada de un correo de una persona cliente (no requiere internet) y lleva al caso recién creado. */
+ @Controller
+ @RequestMapping("/simulador")
+ public class SimuladorController {
+diff --git a/src/main/java/co/edu/unal/apolo/servicios/DetalleCaso.java b/src/main/java/co/edu/unal/apolo/servicios/DetalleCaso.java
+index 4e6aa8e..69c266b 100644
+--- a/src/main/java/co/edu/unal/apolo/servicios/DetalleCaso.java
++++ b/src/main/java/co/edu/unal/apolo/servicios/DetalleCaso.java
+@@ -31,7 +31,7 @@ public record DetalleCaso(
+         List<PasoVista> protocolo,
+         boolean puedeCompletarPasos) {
+ 
+-    /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la clienta y las respuestas automáticas. */
++    /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas. */
+     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
+                                boolean automatico, String autor) {
+     }
+diff --git a/src/main/java/co/edu/unal/apolo/servicios/EntradaSimuladaService.java b/src/main/java/co/edu/unal/apolo/servicios/EntradaSimuladaService.java
+index b426682..d99aa0b 100644
+--- a/src/main/java/co/edu/unal/apolo/servicios/EntradaSimuladaService.java
++++ b/src/main/java/co/edu/unal/apolo/servicios/EntradaSimuladaService.java
+@@ -24,7 +24,7 @@ import co.edu.unal.apolo.persistencia.PqrsRepository;
+ import co.edu.unal.apolo.persistencia.TipoConsultaRepository;
+ 
+ /**
+- * Entrada simulada de correos (CU-01 sin internet): crea una PQRS nueva con su clienta, su mensaje entrante,
++ * Entrada simulada de correos (CU-01 sin internet): crea una PQRS nueva con su persona cliente, su mensaje entrante,
+  * canal Gmail, la prioridad por defecto del tipo de consulta y la fecha límite en días hábiles.
+  */
+ @Service
+@@ -63,10 +63,10 @@ public class EntradaSimuladaService {
+     }
+ 
+     @Transactional
+-    public Pqrs registrarCorreoEntrante(String nombreClienta, String correoClienta, String asunto, String cuerpo,
++    public Pqrs registrarCorreoEntrante(String nombreCliente, String correoCliente, String asunto, String cuerpo,
+                                         Long tipoConsultaId) {
+-        exigirTexto(nombreClienta, "El nombre de la clienta es obligatorio");
+-        exigirTexto(correoClienta, "El correo de la clienta es obligatorio");
++        exigirTexto(nombreCliente, "El nombre de la persona cliente es obligatorio");
++        exigirTexto(correoCliente, "El correo de la persona cliente es obligatorio");
+         exigirTexto(asunto, "El asunto es obligatorio");
+         exigirTexto(cuerpo, "El mensaje es obligatorio");
+         if (tipoConsultaId == null) {
+@@ -75,13 +75,13 @@ public class EntradaSimuladaService {
+         TipoConsulta tipo = tipoConsultaRepository.findById(tipoConsultaId)
+                 .orElseThrow(() -> new RecursoNoEncontradoException("Tipo de consulta", tipoConsultaId));
+ 
+-        String correo = correoClienta.strip().toLowerCase();
++        String correo = correoCliente.strip().toLowerCase();
+         Cliente cliente = clienteRepository.findByCorreo(correo).orElseGet(() -> {
+-            Cliente nueva = new Cliente();
+-            nueva.setNombre(nombreClienta.strip());
+-            nueva.setCorreo(correo);
+-            clienteRepository.save(nueva);
+-            return nueva;
++            Cliente nuevo = new Cliente();
++            nuevo.setNombre(nombreCliente.strip());
++            nuevo.setCorreo(correo);
++            clienteRepository.save(nuevo);
++            return nuevo;
+         });
+ 
+         LocalDateTime ahora = LocalDateTime.now(reloj);
+@@ -124,7 +124,7 @@ public class EntradaSimuladaService {
+         return pqrs;
+     }
+ 
+-    /** Radicado visible para la clienta: PQRS-AAAA-NNNNNN (año de llegada e id con ceros a la izquierda). */
++    /** Radicado visible para la persona cliente: PQRS-AAAA-NNNNNN (año de llegada e id con ceros a la izquierda). */
+     static String generarRadicado(int anio, long id) {
+         return String.format("PQRS-%d-%06d", anio, id);
+     }
+diff --git a/src/main/java/co/edu/unal/apolo/servicios/PqrsService.java b/src/main/java/co/edu/unal/apolo/servicios/PqrsService.java
+index 70f79b9..9707271 100644
+--- a/src/main/java/co/edu/unal/apolo/servicios/PqrsService.java
++++ b/src/main/java/co/edu/unal/apolo/servicios/PqrsService.java
+@@ -138,7 +138,7 @@ public class PqrsService {
+     }
+ 
+     /**
+-     * Envía una respuesta manual a la clienta por el canal de mensajería y la deja en la conversación y en la bitácora.
++     * Envía una respuesta manual a la persona cliente por el canal de mensajería y la deja en la conversación y en la bitácora.
+      * Un caso crítico no admite respuesta mientras nadie lo haya tomado.
+      */
+     @Transactional
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index 52ce48e..aee3574 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -1,11 +1,13 @@
+ spring.application.name=apolo
+ server.port=8080
++# Detrás del proxy de Codespaces, las redirecciones (login, cierre de sesión) usan la dirección pública y no localhost
++server.forward-headers-strategy=framework
+ 
+ # --- Base de datos embebida en archivo (se crea sola en ./data) ---
+ spring.datasource.url=jdbc:h2:file:./data/apolo
+ spring.datasource.username=sa
+ spring.datasource.password=
+-# Consola H2 para la sustentación: http://localhost:8080/h2-console (JDBC URL de arriba, usuario sa, sin contraseña)
++# Consola H2 (solo si la aplicación se inicia en local): http://localhost:8080/h2-console (JDBC URL de arriba, usuario sa, sin contraseña)
+ spring.h2.console.enabled=true
+ 
+ # --- El esquema lo manda schema.sql (versionado); Hibernate no toca las tablas ---
+diff --git a/src/main/resources/data.sql b/src/main/resources/data.sql
+index 196d79e..e8ecd8a 100644
+--- a/src/main/resources/data.sql
++++ b/src/main/resources/data.sql
+@@ -38,7 +38,7 @@ MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, aut
+     (16, 'Felicitación', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO');
+ 
+ MERGE INTO plantilla_respuesta (id, nombre, asunto, cuerpo, palabras_clave, tipo_consulta_id, activa) KEY (id) VALUES
+-    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos atentas.', 'pedido,estado,orden', 1, TRUE),
++    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos pendientes.', 'pedido,estado,orden', 1, TRUE),
+     (2, 'Modo de uso', 'Cómo usar tu producto', 'Hola {nombre}, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'uso,aplicar,rutina,modo', 5, TRUE),
+     (3, 'Solicitud de cambio o devolución', 'Tu solicitud de cambio o devolución', 'Hola {nombre}, recibimos tu solicitud. Para continuar, cuéntanos el número de pedido y envíanos una foto del producto.', 'cambio,devolucion,devolver', 9, TRUE),
+     (4, 'Agradecimiento por sugerencia o felicitación', '¡Gracias por escribirnos!', 'Hola {nombre}, gracias por tu mensaje. Lo compartiremos con todo el equipo de Piel de Azúcar.', 'gracias,felicitacion,sugerencia', 16, TRUE);
+@@ -59,7 +59,7 @@ MERGE INTO mensaje (id, pqrs_id, fecha, asunto, cuerpo, direccion, automatico, a
+     (3, 3, '2026-10-14 08:00:00', '¿Cómo uso el ácido hialurónico?', 'Buenos días, ¿cómo debo aplicar el ácido hialurónico?', 'ENTRANTE', FALSE, NULL),
+     (4, 4, '2026-10-13 10:00:00', 'Quiero devolver mi crema hidratante', 'Compré la crema hidratante y no me funcionó, quisiera devolverla.', 'ENTRANTE', FALSE, NULL),
+     (5, 5, '2026-10-09 11:00:00', 'Me cobraron dos veces mi pedido', 'Veo dos cargos iguales en mi tarjeta por el mismo pedido.', 'ENTRANTE', FALSE, NULL),
+-    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlas, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
++    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlos, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
+     (7, 7, '2026-09-28 14:30:00', 'Mi pedido llegó incompleto', 'Pedí tres productos y solo llegaron dos.', 'ENTRANTE', FALSE, NULL),
+     (8, 8, '2026-10-20 12:10:00', 'Queja por mal trato en la línea de atención', 'Me atendieron de forma muy grosera cuando llamé a preguntar por mi pedido.', 'ENTRANTE', FALSE, NULL),
+     (9, 3, '2026-10-14 08:02:00', 'Cómo usar tu producto', 'Hola Daniela, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'SALIENTE', TRUE, NULL),
+diff --git a/src/main/resources/templates/caso.html b/src/main/resources/templates/caso.html
+index 017d971..7d734c8 100644
+--- a/src/main/resources/templates/caso.html
++++ b/src/main/resources/templates/caso.html
+@@ -19,14 +19,14 @@
+     <div class="banner-critico" th:if="${caso.criticoSinAsignar()}">
+         <strong>Automatización pausada.</strong>
+         Este es un caso crítico y nadie lo ha tomado. No se enviará ninguna respuesta automática:
+-        toma el caso para poder responder a la clienta.
++        toma el caso para poder responder a la persona cliente.
+     </div>
+ 
+     <dl class="datos">
+         <dt>Radicado</dt>
+         <dd th:text="${caso.pqrs().radicado != null} ? ${caso.pqrs().radicado} : '—'">—</dd>
+-        <dt>Clienta</dt>
+-        <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Clienta</dd>
++        <dt>Cliente</dt>
++        <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Cliente</dd>
+         <dt>Categoría</dt>
+         <dd th:text="${caso.pqrs().tipoConsulta.categoria.etiqueta} + ' · ' + ${caso.pqrs().tipoConsulta.descripcion}">Categoría</dd>
+         <dt>Prioridad</dt>
+@@ -83,7 +83,7 @@
+     </div>
+     <p class="nota" th:if="${#lists.isEmpty(caso.mensajes())}">Todavía no hay mensajes.</p>
+ 
+-    <h3>Responder a la clienta</h3>
++    <h3>Responder a la persona cliente</h3>
+     <p class="nota" th:if="${!caso.puedeResponder()}" th:text="${caso.motivoRespuestaBloqueada()}">Motivo</p>
+     <form th:action="@{/pqrs/{id}/responder(id=${caso.pqrs().id})}" th:object="${formulario}" method="post" class="formulario">
+         <label for="asunto">Asunto (opcional)</label>
+diff --git a/src/main/resources/templates/inicio.html b/src/main/resources/templates/inicio.html
+index 3ef96c1..b5b3822 100644
+--- a/src/main/resources/templates/inicio.html
++++ b/src/main/resources/templates/inicio.html
+@@ -28,7 +28,7 @@
+                 <th>ID</th>
+                 <th>Radicado</th>
+                 <th>Asunto</th>
+-                <th>Clienta</th>
++                <th>Cliente</th>
+                 <th>Categoría</th>
+                 <th>Prioridad</th>
+                 <th>Estado</th>
+@@ -41,7 +41,7 @@
+                 <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().id}">1</a></td>
+                 <td th:text="${r.pqrs().radicado != null} ? ${r.pqrs().radicado} : '—'">—</td>
+                 <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().asunto}">Asunto</a></td>
+-                <td th:text="${r.pqrs().cliente.nombre}">Clienta</td>
++                <td th:text="${r.pqrs().cliente.nombre}">Cliente</td>
+                 <td th:text="${r.pqrs().tipoConsulta.categoria.etiqueta}">Categoría</td>
+                 <td><span class="etiqueta" th:classappend="'prio-' + ${r.pqrs().prioridad.name().toLowerCase()}" th:text="${r.pqrs().prioridad.etiqueta}">Media</span></td>
+                 <td><span class="etiqueta" th:classappend="'estado-' + ${r.pqrs().estado.name().toLowerCase()}" th:text="${r.pqrs().estado.etiqueta}">Pendiente</span></td>
+diff --git a/src/main/resources/templates/simulador.html b/src/main/resources/templates/simulador.html
+index b2d2644..1eaaad6 100644
+--- a/src/main/resources/templates/simulador.html
++++ b/src/main/resources/templates/simulador.html
+@@ -17,11 +17,11 @@
+     <form th:action="@{/simulador}" th:object="${formulario}" method="post" class="formulario">
+         <div class="mensaje error" th:if="${#fields.hasGlobalErrors()}" th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
+ 
+-        <label for="nombre">Nombre de la clienta</label>
++        <label for="nombre">Nombre de la persona cliente</label>
+         <input id="nombre" type="text" th:field="*{nombre}">
+         <p class="error-campo" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">Error</p>
+ 
+-        <label for="correo">Correo de la clienta</label>
++        <label for="correo">Correo de la persona cliente</label>
+         <input id="correo" type="email" th:field="*{correo}">
+         <p class="error-campo" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}">Error</p>
+ 
+diff --git a/src/test/java/co/edu/unal/apolo/FlujoCasoCriticoIntegracionTest.java b/src/test/java/co/edu/unal/apolo/FlujoCasoCriticoIntegracionTest.java
+index 1959ea3..ed84582 100644
+--- a/src/test/java/co/edu/unal/apolo/FlujoCasoCriticoIntegracionTest.java
++++ b/src/test/java/co/edu/unal/apolo/FlujoCasoCriticoIntegracionTest.java
+@@ -98,7 +98,7 @@ class FlujoCasoCriticoIntegracionTest {
+         mockMvc.perform(get("/pqrs/2").with(operador))
+                 .andExpect(content().string(containsString("Protocolo crítico")))
+                 .andExpect(content().string(containsString("Paso del protocolo completado")))
+-                .andExpect(content().string(containsString("✔ Pedir a la clienta que suspenda el uso del producto")));
++                .andExpect(content().string(containsString("✔ Pedir a la persona cliente que suspenda el uso del producto")));
+     }
+ 
+     @Test
+diff --git a/src/test/java/co/edu/unal/apolo/configuracion/RelojConfigTest.java b/src/test/java/co/edu/unal/apolo/configuracion/RelojConfigTest.java
+new file mode 100644
+index 0000000..c852b63
+--- /dev/null
++++ b/src/test/java/co/edu/unal/apolo/configuracion/RelojConfigTest.java
+@@ -0,0 +1,18 @@
++package co.edu.unal.apolo.configuracion;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.time.Clock;
++import java.time.ZoneId;
++
++import org.junit.jupiter.api.Test;
++
++class RelojConfigTest {
++
++    @Test
++    void elRelojDeLaAplicacionUsaLaHoraDeBogota() {
++        Clock reloj = new RelojConfig().reloj();
++
++        assertThat(reloj.getZone()).isEqualTo(ZoneId.of("America/Bogota"));
++    }
++}
+diff --git a/src/test/java/co/edu/unal/apolo/presentacion/InicioControllerTest.java b/src/test/java/co/edu/unal/apolo/presentacion/InicioControllerTest.java
+index eba982f..03c75a8 100644
+--- a/src/test/java/co/edu/unal/apolo/presentacion/InicioControllerTest.java
++++ b/src/test/java/co/edu/unal/apolo/presentacion/InicioControllerTest.java
+@@ -70,7 +70,7 @@ class InicioControllerTest {
+     }
+ 
+     @Test
+-    void laBandejaMuestraIdClientaCategoriaPrioridadEstadoYPlazoEnDiasHabiles() throws Exception {
++    void laBandejaMuestraIdClienteCategoriaPrioridadEstadoYPlazoEnDiasHabiles() throws Exception {
+         when(pqrsService.listar(false)).thenReturn(List.of(
+                 new ResumenPqrs(pqrs(2L, "Valentina Ortiz", Prioridad.CRITICA, EstadoPqrs.PENDIENTE), 4),
+                 new ResumenPqrs(pqrs(7L, "Camila Rojas", Prioridad.ALTA, EstadoPqrs.EN_ATENCION), -3)));
+@@ -87,9 +87,9 @@ class InicioControllerTest {
+                 .andExpect(content().string(containsString("/pqrs/2")));
+     }
+ 
+-    private Pqrs pqrs(Long id, String clienta, Prioridad prioridad, EstadoPqrs estado) {
++    private Pqrs pqrs(Long id, String nombreCliente, Prioridad prioridad, EstadoPqrs estado) {
+         Cliente cliente = new Cliente();
+-        cliente.setNombre(clienta);
++        cliente.setNombre(nombreCliente);
+         TipoConsulta tipo = new TipoConsulta();
+         tipo.setCategoria(Categoria.REACCIONES);
+         Pqrs pqrs = new Pqrs();
+diff --git a/src/test/java/co/edu/unal/apolo/servicios/EntradaSimuladaServiceTest.java b/src/test/java/co/edu/unal/apolo/servicios/EntradaSimuladaServiceTest.java
+index 13f20aa..700e777 100644
+--- a/src/test/java/co/edu/unal/apolo/servicios/EntradaSimuladaServiceTest.java
++++ b/src/test/java/co/edu/unal/apolo/servicios/EntradaSimuladaServiceTest.java
+@@ -60,7 +60,7 @@ class EntradaSimuladaServiceTest {
+     }
+ 
+     @Test
+-    void creaLaPqrsConSuClientaSuMensajeEntranteYElPlazoEnDiasHabiles() {
++    void creaLaPqrsConSuPersonaClienteSuMensajeEntranteYElPlazoEnDiasHabiles() {
+         TipoConsulta reaccion = tipo(7L, Prioridad.CRITICA);
+         when(tipoConsultaRepository.findById(7L)).thenReturn(Optional.of(reaccion));
+         when(clienteRepository.findByCorreo("ana@example.com")).thenReturn(Optional.empty());
+@@ -111,7 +111,7 @@ class EntradaSimuladaServiceTest {
+     }
+ 
+     @Test
+-    void reutilizaLaClientaSiYaExistePorCorreo() {
++    void reutilizaLaPersonaClienteSiYaExistePorCorreo() {
+         Cliente existente = new Cliente();
+         existente.setNombre("Camila Rojas");
+         existente.setCorreo("camila.rojas@example.com");
+-- 
+2.43.0
+
