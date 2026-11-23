@@ -38,11 +38,13 @@ import co.edu.unal.apolo.dominio.EstadoPqrs;
 import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.Prioridad;
+import co.edu.unal.apolo.dominio.TipoAccion;
 import co.edu.unal.apolo.dominio.TipoConsulta;
 import co.edu.unal.apolo.servicios.DetalleCaso;
 import co.edu.unal.apolo.servicios.DetalleCaso.MensajeVista;
 import co.edu.unal.apolo.servicios.DetalleCaso.PasoVista;
 import co.edu.unal.apolo.servicios.DetalleCaso.ResolucionVista;
+import co.edu.unal.apolo.servicios.DetalleCaso.RegistroVista;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.RecursoNoEncontradoException;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
@@ -183,7 +185,7 @@ class CasoControllerTest {
                 new PasoVista(PasoProtocolo.SOLICITAR_FOTOS, false, null, null));
         when(pqrsService.detalle(10L, CORREO)).thenReturn(new DetalleCaso(base.pqrs(), base.mensajes(), base.bitacora(),
                 base.diasHabilesRestantes(), false, false, true, null, protocolo, true,
-                false, "Toma el caso antes de resolverlo", null));
+                false, "Toma el caso antes de resolverlo", null, null));
 
         mockMvc.perform(get("/pqrs/10"))
                 .andExpect(status().isOk())
@@ -289,7 +291,110 @@ class CasoControllerTest {
                 .andExpect(content().string(not(containsString("/pqrs/10/resolver"))));
     }
 
+    // ---------- notas internas (E5-11) y bitácora (E5-12)
+
+    @Test
+    void agregarUnaNotaLlamaAlServicioConElOperadorDeLaSesionYVuelveAlCaso() throws Exception {
+        mockMvc.perform(post("/pqrs/10/notas").with(csrf()).param("nota", "Llamar a la persona cliente."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attributeExists("mensajeOk"));
+
+        verify(pqrsService).agregarNotaInterna(10L, CORREO, "Llamar a la persona cliente.");
+    }
+
+    @Test
+    void agregarUnaNotaVaciaVuelveAlFormularioConElErrorYNoLlamaAlServicio() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalle(false, false, true, null));
+
+        mockMvc.perform(post("/pqrs/10/notas").with(csrf()).param("nota", "   "))
+                .andExpect(status().isOk())
+                .andExpect(view().name("caso"))
+                .andExpect(model().attributeHasFieldErrors("notaFormulario", "nota"))
+                .andExpect(content().string(containsString("Escribe la nota antes de guardarla")));
+
+        verify(pqrsService, never()).agregarNotaInterna(any(), any(), any());
+    }
+
+    @Test
+    void agregarUnaNotaDemasiadoLargaVuelveAlFormularioConElError() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalle(false, false, true, null));
+
+        mockMvc.perform(post("/pqrs/10/notas").with(csrf()).param("nota", "a".repeat(2001)))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("notaFormulario", "nota"));
+
+        verify(pqrsService, never()).agregarNotaInterna(any(), any(), any());
+    }
+
+    @Test
+    void siElServicioRechazaLaNotaSeMuestraElMotivo() throws Exception {
+        doThrow(new ReglaNegocioException("Toma el caso antes de agregar notas internas"))
+                .when(pqrsService).agregarNotaInterna(10L, CORREO, "Nota");
+
+        mockMvc.perform(post("/pqrs/10/notas").with(csrf()).param("nota", "Nota"))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeError", "Toma el caso antes de agregar notas internas"));
+    }
+
+    @Test
+    void agregarUnaNotaSinTokenCsrfEsRechazado() throws Exception {
+        mockMvc.perform(post("/pqrs/10/notas").param("nota", "Nota"))
+                .andExpect(status().isForbidden());
+
+        verify(pqrsService, never()).agregarNotaInterna(any(), any(), any());
+    }
+
+    @Test
+    void elCasoMuestraElFormularioDeNotaHabilitadoYAvisaQueEsInterna() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalle(false, false, true, null));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Solo la ve el equipo")))
+                .andExpect(content().string(containsString("/pqrs/10/notas")))
+                .andExpect(content().string(containsString("Guardar nota")))
+                .andExpect(content().string(not(containsString("disabled"))));
+    }
+
+    @Test
+    void siNoSePuedeAgregarNotasElFormularioQuedaDeshabilitadoConElMotivo() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(
+                detalle(true, true, false, "Caso crítico: toma el caso antes de responder",
+                        "Toma el caso antes de agregar notas internas"));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Toma el caso antes de agregar notas internas")));
+    }
+
+    @Test
+    void laBitacoraMuestraElCambioDeEstadoYLaNotaInterna() throws Exception {
+        DetalleCaso base = detalle(false, false, true, null);
+        List<RegistroVista> bitacora = List.of(
+                new RegistroVista(LocalDateTime.of(2026, 11, 4, 9, 0), TipoAccion.CASO_TOMADO, "Operador Uno",
+                        "Pendiente → Atención inmediata", null),
+                new RegistroVista(LocalDateTime.of(2026, 11, 4, 9, 30), TipoAccion.NOTA_INTERNA, "Operador Uno",
+                        null, "Llamar mañana <b>antes</b> de las 10"),
+                new RegistroVista(LocalDateTime.of(2026, 11, 4, 9, 40), TipoAccion.RESPUESTA_ENVIADA, "Operador Uno",
+                        null, null));
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(new DetalleCaso(base.pqrs(), base.mensajes(), bitacora,
+                base.diasHabilesRestantes(), false, false, true, null, List.of(), false, false, null, null, null));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("04/11/2026 09:00")))
+                .andExpect(content().string(containsString("Pendiente → Atención inmediata")))
+                .andExpect(content().string(containsString("Nota interna: Llamar mañana &lt;b&gt;antes&lt;/b&gt; de las 10")))
+                .andExpect(content().string(not(containsString("<b>antes</b>"))));
+    }
+
     private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo) {
+        return detalle(criticoSinAsignar, puedeTomar, puedeResponder, motivo, null);
+    }
+
+    private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo,
+                                String motivoNotaBloqueada) {
         Cliente cliente = new Cliente();
         cliente.setNombre("Valentina Ortiz");
         cliente.setCorreo("valentina.ortiz@example.com");
@@ -308,12 +413,13 @@ class CasoControllerTest {
         MensajeVista mensaje = new MensajeVista(LocalDateTime.of(2026, 11, 3, 10, 0), DireccionMensaje.ENTRANTE,
                 "Me salió enrojecimiento con el sérum", "Hola, me salió enrojecimiento y ardor.", false, null);
         return new DetalleCaso(pqrs, List.of(mensaje), List.of(), 4, criticoSinAsignar, puedeTomar, puedeResponder, motivo,
-                List.of(), false, puedeResponder, puedeResponder ? null : "Toma el caso antes de resolverlo", null);
+                List.of(), false, puedeResponder, puedeResponder ? null : "Toma el caso antes de resolverlo", null,
+                motivoNotaBloqueada);
     }
 
     private DetalleCaso detalleParaResolver(boolean puedeResolver, String motivoNoResolver, ResolucionVista resolucion) {
         DetalleCaso base = detalle(false, false, true, null);
         return new DetalleCaso(base.pqrs(), base.mensajes(), base.bitacora(), base.diasHabilesRestantes(), false, false,
-                true, null, base.protocolo(), false, puedeResolver, motivoNoResolver, resolucion);
+                true, null, base.protocolo(), false, puedeResolver, motivoNoResolver, resolucion, null);
     }
 }
