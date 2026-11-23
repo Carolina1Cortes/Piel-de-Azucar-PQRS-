@@ -138,7 +138,7 @@ public class PqrsService {
     }
 
     /**
-     * Envía una respuesta manual a la clienta por el canal de mensajería y la deja en la conversación y en la bitácora.
+     * Envía una respuesta manual a la persona cliente por el canal de mensajería y la deja en la conversación y en la bitácora.
      * Un caso crítico no admite respuesta mientras nadie lo haya tomado.
      */
     @Transactional

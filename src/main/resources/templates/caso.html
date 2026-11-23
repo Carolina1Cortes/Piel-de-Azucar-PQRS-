@@ -19,14 +19,14 @@
     <div class="banner-critico" th:if="${caso.criticoSinAsignar()}">
         <strong>Automatización pausada.</strong>
         Este es un caso crítico y nadie lo ha tomado. No se enviará ninguna respuesta automática:
-        toma el caso para poder responder a la clienta.
+        toma el caso para poder responder a la persona cliente.
     </div>
 
     <dl class="datos">
         <dt>Radicado</dt>
         <dd th:text="${caso.pqrs().radicado != null} ? ${caso.pqrs().radicado} : '—'">—</dd>
-        <dt>Clienta</dt>
-        <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Clienta</dd>
+        <dt>Cliente</dt>
+        <dd th:text="${caso.pqrs().cliente.nombre} + ' · ' + ${caso.pqrs().cliente.correo}">Cliente</dd>
         <dt>Categoría</dt>
         <dd th:text="${caso.pqrs().tipoConsulta.categoria.etiqueta} + ' · ' + ${caso.pqrs().tipoConsulta.descripcion}">Categoría</dd>
         <dt>Prioridad</dt>
@@ -83,7 +83,7 @@
     </div>
     <p class="nota" th:if="${#lists.isEmpty(caso.mensajes())}">Todavía no hay mensajes.</p>
 
-    <h3>Responder a la clienta</h3>
+    <h3>Responder a la persona cliente</h3>
     <p class="nota" th:if="${!caso.puedeResponder()}" th:text="${caso.motivoRespuestaBloqueada()}">Motivo</p>
     <form th:action="@{/pqrs/{id}/responder(id=${caso.pqrs().id})}" th:object="${formulario}" method="post" class="formulario">
         <label for="asunto">Asunto (opcional)</label>

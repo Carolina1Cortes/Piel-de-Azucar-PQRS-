@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** Datos del formulario que simula la llegada de un correo de una clienta. */
+/** Datos del formulario que simula la llegada de un correo de una persona cliente. */
 public class CorreoSimuladoFormulario {
 
     @NotBlank(message = "El nombre es obligatorio")

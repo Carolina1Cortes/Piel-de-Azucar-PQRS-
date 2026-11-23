@@ -4,7 +4,7 @@
 - Dominio, clases, métodos, variables, tablas y columnas en **español sin tildes ni eñes** (`fechaLimite`, `fecha_limite`, `tomarCaso`). Los métodos de Spring Data llevan el nombre en inglés que exige el framework (`findByEstado`).
 - Clases en `PascalCase`, métodos y atributos en `camelCase`, constantes y valores de enumeración en `MAYUSCULAS_CON_GUION_BAJO`.
 - Tablas y columnas en `snake_case`, tabla en singular (`pqrs`, `cliente`).
-- Textos visibles para la usuaria, comentarios y mensajes de commit en español.
+- Textos visibles para quien usa la aplicación, comentarios y mensajes de commit en español.
 - Interfaces sin prefijo `I`. Implementaciones con nombre propio (`GmailCanal`, `CanalSimulado`).
 
 ## Capas y dependencias

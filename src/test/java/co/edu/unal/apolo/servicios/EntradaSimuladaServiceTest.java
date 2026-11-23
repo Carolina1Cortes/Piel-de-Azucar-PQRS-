@@ -60,7 +60,7 @@ class EntradaSimuladaServiceTest {
     }
 
     @Test
-    void creaLaPqrsConSuClientaSuMensajeEntranteYElPlazoEnDiasHabiles() {
+    void creaLaPqrsConSuPersonaClienteSuMensajeEntranteYElPlazoEnDiasHabiles() {
         TipoConsulta reaccion = tipo(7L, Prioridad.CRITICA);
         when(tipoConsultaRepository.findById(7L)).thenReturn(Optional.of(reaccion));
         when(clienteRepository.findByCorreo("ana@example.com")).thenReturn(Optional.empty());
@@ -111,7 +111,7 @@ class EntradaSimuladaServiceTest {
     }
 
     @Test
-    void reutilizaLaClientaSiYaExistePorCorreo() {
+    void reutilizaLaPersonaClienteSiYaExistePorCorreo() {
         Cliente existente = new Cliente();
         existente.setNombre("Camila Rojas");
         existente.setCorreo("camila.rojas@example.com");
