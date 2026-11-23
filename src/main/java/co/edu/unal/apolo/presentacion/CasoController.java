@@ -14,11 +14,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 
+import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
 
-/** Pantalla de un caso: ver la conversación, tomar el caso, completar el protocolo crítico y responder. Las reglas viven en PqrsService. */
+/** Pantalla de un caso: ver la conversación, tomar el caso, completar el protocolo crítico, responder y resolver. Las reglas viven en PqrsService. */
 @Controller
 @RequestMapping("/pqrs")
 public class CasoController {
@@ -32,10 +33,13 @@ public class CasoController {
     @GetMapping("/{id}")
     public String ver(@PathVariable Long id, Principal principal, Model model) {
         cargarCaso(id, principal, model);
-        if (!model.containsAttribute("formulario")) {
-            model.addAttribute("formulario", new RespuestaFormulario());
-        }
         return "caso";
+    }
+
+    /** Las categorías del menú de "Resolver caso"; se agregan al modelo de todas las respuestas de este controlador. */
+    @ModelAttribute("categoriasResolucion")
+    public CategoriaResolucion[] categoriasResolucion() {
+        return CategoriaResolucion.values();
     }
 
     @PostMapping("/{id}/tomar")
@@ -81,8 +85,35 @@ public class CasoController {
         return "redirect:/pqrs/" + id;
     }
 
+    @PostMapping("/{id}/resolver")
+    public String resolver(@PathVariable Long id,
+                           @Valid @ModelAttribute("resolucionFormulario") ResolucionFormulario formulario,
+                           BindingResult errores,
+                           Principal principal,
+                           Model model,
+                           RedirectAttributes redireccion) {
+        if (errores.hasErrors()) {
+            cargarCaso(id, principal, model);
+            return "caso";
+        }
+        try {
+            pqrsService.resolverCaso(id, principal.getName(), formulario.getCategoria(), formulario.getNota());
+            redireccion.addFlashAttribute("mensajeOk", "Caso resuelto. Ya no admite respuestas.");
+        } catch (ReglaNegocioException e) {
+            redireccion.addFlashAttribute("mensajeError", e.getMessage());
+        }
+        return "redirect:/pqrs/" + id;
+    }
+
+    /** Carga el caso y deja en el modelo los dos formularios (vacíos si no vienen ya con errores de validación). */
     private void cargarCaso(Long id, Principal principal, Model model) {
         model.addAttribute("caso", pqrsService.detalle(id, principal.getName()));
         model.addAttribute("usuario", principal.getName());
+        if (!model.containsAttribute("formulario")) {
+            model.addAttribute("formulario", new RespuestaFormulario());
+        }
+        if (!model.containsAttribute("resolucionFormulario")) {
+            model.addAttribute("resolucionFormulario", new ResolucionFormulario());
+        }
     }
 }

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
 import co.edu.unal.apolo.dominio.Mensaje;
@@ -512,6 +513,273 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
         assertThat(captor.getValue().getUsuario()).isSameAs(admin);
     }
 
+    // ---------- resolver casos
+
+    @Test
+    void resolverUnCasoLoPasaAResueltaYGuardaLaResolucionYLaBitacora() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        prepararResolver(caso, operador);
+
+        Pqrs resuelto = servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "  Se envió el cambio.  ");
+
+        assertThat(resuelto.getEstado()).isEqualTo(EstadoPqrs.RESUELTA);
+        assertThat(resuelto.getCategoriaResolucion()).isEqualTo(CategoriaResolucion.SOLUCIONADO);
+        assertThat(resuelto.getDescripcionSolucion()).isEqualTo("Se envió el cambio.");
+        assertThat(resuelto.getFechaResolucion()).isEqualTo(LocalDateTime.of(2026, 11, 4, 15, 0));
+        assertThat(resuelto.getResueltaPor()).isSameAs(operador);
+        verify(pqrsRepository).save(caso);
+        ArgumentCaptor<RegistroBitacora> captor = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(captor.capture());
+        assertThat(captor.getValue().getAccion()).isEqualTo(TipoAccion.CASO_RESUELTO);
+        assertThat(captor.getValue().getMotivo()).isEqualTo("SOLUCIONADO");
+        assertThat(captor.getValue().getNotasInternas()).isEqualTo("Se envió el cambio.");
+        assertThat(captor.getValue().getUsuario()).isSameAs(operador);
+        assertThat(captor.getValue().getPqrs()).isSameAs(caso);
+        verifyNoInteractions(canal);
+    }
+
+    @Test
+    void resolverUnCasoCriticoConElProtocoloCompletoLoDejaResuelto() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararPaso(critica, operador, todosLosPasos(operador));
+
+        Pqrs resuelto = servicio.resolverCaso(2L, CORREO_OPERADOR, CategoriaResolucion.COMPENSACION_APLICADA, "Se repuso el producto.");
+
+        assertThat(resuelto.getEstado()).isEqualTo(EstadoPqrs.RESUELTA);
+        assertThat(resuelto.getCategoriaResolucion()).isEqualTo(CategoriaResolucion.COMPENSACION_APLICADA);
+    }
+
+    @Test
+    void rechazaResolverUnCasoCriticoConPasosDelProtocoloPendientes() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararPaso(critica, operador, registroPaso(PasoProtocolo.SUSPENDER_USO, operador));
+
+        assertThatThrownBy(() -> servicio.resolverCaso(2L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Completa el protocolo crítico antes de resolver el caso");
+        assertThat(critica.getEstado()).isEqualTo(EstadoPqrs.ATENCION_INMEDIATA);
+        verify(pqrsRepository, never()).save(any());
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaResolverSinCategoria() {
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, null, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Elige la categoría de la resolución");
+        verifyNoInteractions(pqrsRepository, bitacoraRepository);
+    }
+
+    @Test
+    void rechazaResolverSinNotaOConNotaEnBlanco() {
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "   "))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Escribe la nota de resolución");
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, null))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Escribe la nota de resolución");
+        verifyNoInteractions(pqrsRepository, bitacoraRepository);
+    }
+
+    @Test
+    void rechazaUnaNotaMasLargaQueLaColumna() {
+        String nota = "x".repeat(2001);
+
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, nota))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("2000");
+        verifyNoInteractions(pqrsRepository, bitacoraRepository);
+    }
+
+    @Test
+    void rechazaResolverUnCasoQueNadieHaTomado() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.PENDIENTE, null);
+        prepararResolver(caso, operador);
+
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("Toma el caso antes de resolverlo");
+        verify(pqrsRepository, never()).save(any());
+    }
+
+    @Test
+    void rechazaResolverUnCasoQueYaEstaResuelto() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.RESUELTA, operador);
+        prepararResolver(caso, operador);
+
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso ya fue resuelto");
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void unOperadorNoPuedeResolverUnCasoQueAtiendeOtraPersona() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Usuario otro = usuario(3L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, otro);
+        prepararResolver(caso, operador);
+
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso lo atiende otra persona");
+        verify(pqrsRepository, never()).save(any());
+    }
+
+    @Test
+    void unAdminSiPuedeResolverUnCasoQueAtiendeUnOperador() {
+        Usuario admin = usuario(1L, Rol.ADMIN, false);
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        prepararResolver(caso, admin);
+
+        servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.NO_PROCEDE, "Fuera de política.");
+
+        assertThat(caso.getEstado()).isEqualTo(EstadoPqrs.RESUELTA);
+        assertThat(caso.getResueltaPor()).isSameAs(admin);
+    }
+
+    @Test
+    void unOperadorBloqueadoNoPuedeResolver() {
+        Usuario bloqueado = usuario(2L, Rol.OPERADOR, true);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, bloqueado);
+        prepararResolver(caso, bloqueado);
+
+        assertThatThrownBy(() -> servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("bloqueado");
+        verify(pqrsRepository, never()).save(any());
+    }
+
+    @Test
+    void resolverUnCasoInexistenteLanzaRecursoNoEncontrado() {
+        when(pqrsRepository.findByIdConDetalle(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> servicio.resolverCaso(99L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo"))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void despuesDeResolverUnCasoYaNoAdmiteRespuestas() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        prepararResolver(caso, operador);
+        servicio.resolverCaso(5L, CORREO_OPERADOR, CategoriaResolucion.SOLUCIONADO, "Listo");
+
+        assertThatThrownBy(() -> servicio.enviarRespuesta(5L, CORREO_OPERADOR, null, "Hola otra vez"))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessage("El caso ya fue resuelto");
+        verifyNoInteractions(canal);
+    }
+
+    @Test
+    void elDetalleDeUnCasoTomadoPermiteResolver() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        prepararDetalle(caso, operador);
+
+        DetalleCaso detalle = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeResolver()).isTrue();
+        assertThat(detalle.motivoResolverBloqueado()).isNull();
+        assertThat(detalle.resolucion()).isNull();
+    }
+
+    @Test
+    void elDetalleDeUnCasoCriticoConPasosPendientesNoPermiteResolver() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararDetalle(critica, operador);
+
+        DetalleCaso detalle = servicio.detalle(2L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeResolver()).isFalse();
+        assertThat(detalle.motivoResolverBloqueado()).isEqualTo("Completa el protocolo crítico antes de resolver el caso");
+    }
+
+    @Test
+    void elDetalleDeUnCasoCriticoConElProtocoloCompletoPermiteResolver() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs critica = pqrs(2L, Prioridad.CRITICA, EstadoPqrs.ATENCION_INMEDIATA, operador);
+        prepararDetalle(critica, operador);
+        when(bitacoraRepository.findByPqrsIdAndAccionOrderByFechaAsc(2L, TipoAccion.PASO_PROTOCOLO_COMPLETADO))
+                .thenReturn(List.of(todosLosPasos(operador)));
+
+        DetalleCaso detalle = servicio.detalle(2L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeResolver()).isTrue();
+    }
+
+    @Test
+    void elDetalleDeUnCasoSinResponsableExplicaQueHayQueTomarloParaResolver() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.PENDIENTE, null);
+        prepararDetalle(caso, operador);
+
+        DetalleCaso detalle = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeResolver()).isFalse();
+        assertThat(detalle.motivoResolverBloqueado()).isEqualTo("Toma el caso antes de resolverlo");
+    }
+
+    @Test
+    void elDetalleDeUnCasoResueltoMuestraLaResolucionYNoOfreceResolver() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.RESUELTA, operador);
+        caso.setCategoriaResolucion(CategoriaResolucion.INFORMACION_BRINDADA);
+        caso.setDescripcionSolucion("Se explicó el modo de uso.");
+        caso.setFechaResolucion(LocalDateTime.of(2026, 11, 3, 16, 30));
+        caso.setResueltaPor(operador);
+        prepararDetalle(caso, operador);
+
+        DetalleCaso detalle = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(detalle.puedeResolver()).isFalse();
+        assertThat(detalle.resolucion()).isNotNull();
+        assertThat(detalle.resolucion().categoria()).isEqualTo(CategoriaResolucion.INFORMACION_BRINDADA);
+        assertThat(detalle.resolucion().nota()).isEqualTo("Se explicó el modo de uso.");
+        assertThat(detalle.resolucion().fecha()).isEqualTo(LocalDateTime.of(2026, 11, 3, 16, 30));
+        assertThat(detalle.resolucion().resueltaPor()).isEqualTo("Operador Uno");
+    }
+
+    @Test
+    void elDetalleDeUnCasoResueltoAntesDeLasCategoriasNoFalla() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.BAJA, EstadoPqrs.RESUELTA, null);
+        caso.setDescripcionSolucion("Respuesta automática enviada.");
+        prepararDetalle(caso, operador);
+
+        DetalleCaso detalle = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(detalle.resolucion().categoria()).isNull();
+        assertThat(detalle.resolucion().resueltaPor()).isNull();
+        assertThat(detalle.resolucion().nota()).isEqualTo("Respuesta automática enviada.");
+    }
+
+    @Test
+    void laBitacoraMuestraLaCategoriaDeLaResolucionYSuNotaInterna() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(5L, Prioridad.MEDIA, EstadoPqrs.RESUELTA, operador);
+        prepararDetalle(caso, operador);
+        RegistroBitacora registro = new RegistroBitacora();
+        registro.setFecha(LocalDateTime.of(2026, 11, 4, 9, 0));
+        registro.setAccion(TipoAccion.CASO_RESUELTO);
+        registro.setMotivo(CategoriaResolucion.NO_PROCEDE.name());
+        registro.setNotasInternas("Fuera de política.");
+        registro.setUsuario(operador);
+        when(bitacoraRepository.findByPqrsIdOrderByFechaAsc(5L)).thenReturn(List.of(registro));
+
+        DetalleCaso detalle = servicio.detalle(5L, CORREO_OPERADOR);
+
+        assertThat(detalle.bitacora().get(0).motivo()).isEqualTo(CategoriaResolucion.NO_PROCEDE.getEtiqueta());
+        assertThat(detalle.bitacora().get(0).notas()).isEqualTo("Fuera de política.");
+    }
+
     // ---------- ayudas
 
     private void prepararPaso(Pqrs pqrs, Usuario usuario, RegistroBitacora... completados) {
@@ -519,6 +787,20 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
         when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(usuario));
         when(bitacoraRepository.findByPqrsIdAndAccionOrderByFechaAsc(pqrs.getId(), TipoAccion.PASO_PROTOCOLO_COMPLETADO))
                 .thenReturn(List.of(completados));
+    }
+
+    private void prepararResolver(Pqrs pqrs, Usuario usuario) {
+        when(pqrsRepository.findByIdConDetalle(pqrs.getId())).thenReturn(Optional.of(pqrs));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(usuario));
+    }
+
+    private RegistroBitacora[] todosLosPasos(Usuario usuario) {
+        PasoProtocolo[] pasos = PasoProtocolo.values();
+        RegistroBitacora[] registros = new RegistroBitacora[pasos.length];
+        for (int i = 0; i < pasos.length; i++) {
+            registros[i] = registroPaso(pasos[i], usuario);
+        }
+        return registros;
     }
 
     private RegistroBitacora registroPaso(PasoProtocolo paso, Usuario usuario) {

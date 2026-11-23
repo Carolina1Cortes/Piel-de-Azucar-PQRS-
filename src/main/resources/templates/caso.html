@@ -97,6 +97,37 @@
         <button class="boton" type="submit" th:disabled="${!caso.puedeResponder()}">Enviar respuesta</button>
     </form>
 
+    <th:block th:if="${caso.resolucion() != null}">
+        <h3>Resolución</h3>
+        <dl class="datos">
+            <dt>Categoría</dt>
+            <dd th:text="${caso.resolucion().categoria() != null} ? ${caso.resolucion().categoria().etiqueta} : 'Sin categoría'">Solucionado</dd>
+            <dt>Nota interna</dt>
+            <dd th:text="${caso.resolucion().nota() != null} ? ${caso.resolucion().nota()} : '—'">Nota</dd>
+            <dt>Resuelto por</dt>
+            <dd th:text="${(caso.resolucion().resueltaPor() != null ? caso.resolucion().resueltaPor() : 'Sistema') + (caso.resolucion().fecha() != null ? ' · ' + #temporals.format(caso.resolucion().fecha(), 'dd/MM/yyyy HH:mm') : '')}">Operador · 01/01/2026 09:00</dd>
+        </dl>
+    </th:block>
+
+    <th:block th:if="${caso.resolucion() == null}">
+        <h3>Resolver caso</h3>
+        <p class="nota" th:if="${!caso.puedeResolver()}" th:text="${caso.motivoResolverBloqueado()}">Motivo</p>
+        <form th:action="@{/pqrs/{id}/resolver(id=${caso.pqrs().id})}" th:object="${resolucionFormulario}" method="post" class="formulario">
+            <label for="categoria">Categoría de la resolución</label>
+            <select id="categoria" th:field="*{categoria}" th:disabled="${!caso.puedeResolver()}">
+                <option value="">Elige una categoría…</option>
+                <option th:each="c : ${categoriasResolucion}" th:value="${c.name()}" th:text="${c.etiqueta}">Solucionado</option>
+            </select>
+            <p class="error-campo" th:if="${#fields.hasErrors('categoria')}" th:errors="*{categoria}">Error</p>
+
+            <label for="nota">Nota interna (no la ve la persona cliente)</label>
+            <textarea id="nota" rows="4" th:field="*{nota}" th:disabled="${!caso.puedeResolver()}"></textarea>
+            <p class="error-campo" th:if="${#fields.hasErrors('nota')}" th:errors="*{nota}">Error</p>
+
+            <button class="boton" type="submit" th:disabled="${!caso.puedeResolver()}">Resolver caso</button>
+        </form>
+    </th:block>
+
     <h3>Bitácora</h3>
     <div class="tabla-scroll">
         <table>
@@ -108,7 +139,7 @@
                 <td th:text="${#temporals.format(r.fecha(), 'dd/MM/yyyy HH:mm')}">01/01/2026 09:00</td>
                 <td th:text="${r.accion().etiqueta}">Caso tomado</td>
                 <td th:text="${r.usuario() != null} ? ${r.usuario()} : 'Sistema'">Operador</td>
-                <td th:text="${r.motivo() != null} ? ${r.motivo()} : (${r.notas() != null} ? ${r.notas()} : '—')">—</td>
+                <td th:text="${r.motivo() != null ? (r.notas() != null ? r.motivo() + ' · ' + r.notas() : r.motivo()) : (r.notas() != null ? r.notas() : '—')}">—</td>
             </tr>
             <tr th:if="${#lists.isEmpty(caso.bitacora())}">
                 <td colspan="4">Sin registros todavía.</td>

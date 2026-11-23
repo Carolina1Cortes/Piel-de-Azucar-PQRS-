@@ -62,7 +62,7 @@ a { color:var(--acento); }
 .formulario label { font-weight:600; font-size:.88rem; margin-top:.6rem; }
 input[type=text], input[type=email], input[type=password], select, textarea {
     width:100%; padding:.55rem .7rem; border:1px solid #cfcfcf; border-radius:6px; font:inherit; background:#fff; }
-textarea:disabled, input:disabled { background:#eee; color:#888; cursor:not-allowed; }
+textarea:disabled, input:disabled select:disabled{ background:#eee; color:#888; cursor:not-allowed; }
 .formulario .boton { align-self:flex-start; margin-top:.8rem; }
 
 /* --- Inicio de sesión --- */

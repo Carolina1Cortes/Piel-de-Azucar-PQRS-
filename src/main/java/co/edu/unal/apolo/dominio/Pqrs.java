@@ -55,6 +55,10 @@ public class Pqrs {
     @Column(nullable = true)
     private LocalDateTime fechaResolucion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true, length = 40)
+    private CategoriaResolucion categoriaResolucion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
@@ -157,6 +161,14 @@ public class Pqrs {
 
     public void setFechaResolucion(LocalDateTime fechaResolucion) {
         this.fechaResolucion = fechaResolucion;
+    }
+
+    public CategoriaResolucion getCategoriaResolucion() {
+        return categoriaResolucion;
+    }
+
+    public void setCategoriaResolucion(CategoriaResolucion categoriaResolucion) {
+        this.categoriaResolucion = categoriaResolucion;
     }
 
     public Cliente getCliente() {

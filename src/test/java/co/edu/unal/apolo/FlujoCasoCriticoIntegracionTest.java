@@ -21,7 +21,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import co.edu.unal.apolo.persistencia.BitacoraRepository;
+import co.edu.unal.apolo.dominio.CategoriaResolucion;
+import co.edu.unal.apolo.dominio.EstadoPqrs;
 import co.edu.unal.apolo.persistencia.MensajeRepository;
+import co.edu.unal.apolo.persistencia.PqrsRepository;
 
 /**
  * Recorre con el contexto completo (login, capas, H2 y canal simulado) el objetivo del incremento:
@@ -43,6 +46,9 @@ class FlujoCasoCriticoIntegracionTest {
 
     @Autowired
     private BitacoraRepository bitacoraRepository;
+
+    @Autowired
+    private PqrsRepository pqrsRepository;
 
     @Test
     void elOperadorAbreUnCasoCriticoLoTomaYLoResponde() throws Exception {
@@ -99,6 +105,65 @@ class FlujoCasoCriticoIntegracionTest {
                 .andExpect(content().string(containsString("Protocolo crítico")))
                 .andExpect(content().string(containsString("Paso del protocolo completado")))
                 .andExpect(content().string(containsString("✔ Pedir a la persona cliente que suspenda el uso del producto")));
+    }
+
+    @Test
+    void elOperadorResuelveUnCasoConCategoriaYNotaYElCasoYaNoAdmiteRespuestas() throws Exception {
+        MvcResult creada = mockMvc.perform(post("/simulador").with(operador).with(csrf())
+                        .param("nombre", "Laura Gómez")
+                        .param("correo", "laura.gomez@example.com")
+                        .param("asunto", "¿Cómo aplico el sérum?")
+                        .param("cuerpo", "Quisiera saber cuántas veces al día lo uso.")
+                        .param("tipoConsultaId", "11"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String ruta = creada.getResponse().getRedirectedUrl();
+        Long id = Long.valueOf(ruta.substring(ruta.lastIndexOf('/') + 1));
+
+        // Resolver antes de tomar el caso es rechazado.
+        mockMvc.perform(post(ruta + "/resolver").with(operador).with(csrf())
+                        .param("categoria", "SOLUCIONADO").param("nota", "Listo"))
+                .andExpect(redirectedUrl(ruta))
+                .andExpect(flash().attribute("mensajeError", "Toma el caso antes de resolverlo"));
+
+        mockMvc.perform(post(ruta + "/tomar").with(operador).with(csrf()))
+                .andExpect(flash().attributeExists("mensajeOk"));
+
+        // Sin nota la pantalla vuelve con el error y el caso sigue abierto.
+        mockMvc.perform(post(ruta + "/resolver").with(operador).with(csrf()).param("categoria", "SOLUCIONADO"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Escribe la nota de resolución")));
+        assertThat(pqrsRepository.findById(id).orElseThrow().getEstado()).isEqualTo(EstadoPqrs.EN_ATENCION);
+
+        // Con categoría y nota el caso queda resuelto (esto ejercita la columna y el CHECK nuevos del esquema).
+        mockMvc.perform(post(ruta + "/resolver").with(operador).with(csrf())
+                        .param("categoria", "INFORMACION_BRINDADA")
+                        .param("nota", "Se explicó el modo de uso por teléfono."))
+                .andExpect(redirectedUrl(ruta))
+                .andExpect(flash().attributeExists("mensajeOk"));
+
+        var resuelto = pqrsRepository.findById(id).orElseThrow();
+        assertThat(resuelto.getEstado()).isEqualTo(EstadoPqrs.RESUELTA);
+        assertThat(resuelto.getCategoriaResolucion()).isEqualTo(CategoriaResolucion.INFORMACION_BRINDADA);
+        assertThat(resuelto.getFechaResolucion()).isNotNull();
+        assertThat(bitacoraRepository.findByPqrsIdOrderByFechaAsc(id))
+                .extracting(r -> r.getAccion().name()).contains("CASO_TOMADO", "CASO_RESUELTO");
+
+        // La pantalla muestra la resolución y la nota en la bitácora, pero la nota no entra a la conversación.
+        mockMvc.perform(get(ruta).with(operador))
+                .andExpect(content().string(containsString("Resolución")))
+                .andExpect(content().string(containsString("Información brindada")))
+                .andExpect(content().string(containsString("Caso resuelto")))
+                .andExpect(content().string(containsString("Se explicó el modo de uso por teléfono.")));
+        assertThat(mensajeRepository.findByPqrsIdOrderByFechaAsc(id))
+                .noneMatch(m -> m.getCuerpo().contains("Se explicó el modo de uso por teléfono."));
+
+        // Un caso resuelto ya no admite respuestas ni una segunda resolución.
+        mockMvc.perform(post(ruta + "/responder").with(operador).with(csrf()).param("cuerpo", "Hola otra vez"))
+                .andExpect(flash().attribute("mensajeError", "El caso ya fue resuelto"));
+        mockMvc.perform(post(ruta + "/resolver").with(operador).with(csrf())
+                        .param("categoria", "SOLUCIONADO").param("nota", "Otra vez"))
+                .andExpect(flash().attribute("mensajeError", "El caso ya fue resuelto"));
     }
 
     @Test

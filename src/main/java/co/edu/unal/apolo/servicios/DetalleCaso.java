@@ -3,6 +3,7 @@ package co.edu.unal.apolo.servicios;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.PasoProtocolo;
 import co.edu.unal.apolo.dominio.Pqrs;
@@ -18,6 +19,9 @@ import co.edu.unal.apolo.dominio.TipoAccion;
  * @param motivoRespuestaBloqueada por qué no puede responder (nulo si puede)
  * @param protocolo                pasos del protocolo crítico (vacío si el caso no es crítico)
  * @param puedeCompletarPasos      el operador actual puede marcar pasos del protocolo
+ * @param puedeResolver            el operador actual puede resolver el caso
+ * @param motivoResolverBloqueado  por qué no puede resolverlo (nulo si puede)
+ * @param resolucion               cómo se resolvió el caso (nulo mientras no esté resuelto)
  */
 public record DetalleCaso(
         Pqrs pqrs,
@@ -29,7 +33,10 @@ public record DetalleCaso(
         boolean puedeResponder,
         String motivoRespuestaBloqueada,
         List<PasoVista> protocolo,
-        boolean puedeCompletarPasos) {
+        boolean puedeCompletarPasos,
+        boolean puedeResolver,
+        String motivoResolverBloqueado,
+        ResolucionVista resolucion) {
 
     /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas. */
     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
@@ -38,6 +45,13 @@ public record DetalleCaso(
 
     /** Una línea de la bitácora; {@code usuario} es nulo cuando la acción la hizo el sistema. */
     public record RegistroVista(LocalDateTime fecha, TipoAccion accion, String usuario, String motivo, String notas) {
+    }
+
+    /**
+     * La resolución de un caso resuelto; {@code categoria} es nula en los casos resueltos antes de existir las categorías
+     * y {@code resueltaPor} es nulo si lo resolvió el sistema.
+     */
+    public record ResolucionVista(CategoriaResolucion categoria, String nota, LocalDateTime fecha, String resueltaPor) {
     }
 
     /** Un paso del protocolo crítico; {@code fecha} y {@code usuario} son nulos mientras no se complete. */

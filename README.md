@@ -221,7 +221,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 | Sugerencia de plantillas por palabras clave | Pendiente |
 | Envío real mediante Gmail (`GmailCanal`) | Pendiente |
 | Escalar y delegar casos desde la interfaz | Pendiente |
-| Resolver casos desde la interfaz | Pendiente |
+| Resolver casos desde la interfaz (categoría y nota interna obligatorias) | Implementada (E5-13) |
 | Administración de operadores desde la interfaz | Pendiente |
 
 ### Limitaciones conocidas
@@ -229,7 +229,7 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 - **Clasificación manual en el simulador:** el tipo de consulta se selecciona en el formulario; `ClasificacionService` ya clasifica por palabras clave (columna `tipo_consulta.palabras_clave`, sin tildes ni mayúsculas, coincidencia por inicio de palabra) y deja el caso en "Por clasificar manualmente" si nada coincide, pero aún no está conectado al simulador. Las palabras clave de `data.sql` son provisionales y deben validarse con la dueña del negocio.
 - **Canal de mensajería (mock):** `CanalSimulado` es un mock: registra los envíos en el log y no se envían correos reales. Esto es una decisión del equipo (el envío real por Gmail se descartó por su complejidad), no un error. Las propiedades de Gmail presentes en la configuración no significan que el envío real esté implementado.
 - **Plantillas:** existen datos y entidades para plantillas de respuesta, pero todavía no se sugiere una plantilla automáticamente según palabras clave.
-- **Gestión de casos:** escalar, delegar y resolver casos desde la interfaz están fuera del alcance de este incremento.
+- **Gestión de casos:** escalar y delegar casos desde la interfaz están fuera del alcance de este incremento. Resolver un caso ya es posible: exige categoría y nota interna, y en un caso crítico también el protocolo completo.
 - **Administración de operadores:** el bloqueo de usuarios está contemplado en la lógica, pero no existe una pantalla para administrarlo.
 - **Concurrencia:** todavía no hay control optimista de concurrencia para impedir que dos operadores tomen simultáneamente el mismo caso.
 - **Visibilidad de casos:** cualquier usuario autenticado puede consultar cualquier caso; no existe todavía un filtro de lectura por responsable o rol.

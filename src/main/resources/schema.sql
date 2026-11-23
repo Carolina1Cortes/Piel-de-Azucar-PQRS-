@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS pqrs (
     fecha_limite         DATE         NOT NULL,
     descripcion_solucion VARCHAR(2000),
     fecha_resolucion     TIMESTAMP,
+    categoria_resolucion VARCHAR(40),
     cliente_id           BIGINT NOT NULL,
     tipo_consulta_id     BIGINT NOT NULL,
     responsable_id       BIGINT,
@@ -70,6 +71,8 @@ CREATE TABLE IF NOT EXISTS pqrs (
     CONSTRAINT ck_pqrs_canal CHECK (canal IN ('GMAIL')),
     CONSTRAINT ck_pqrs_estado CHECK (estado IN ('PENDIENTE', 'EN_ATENCION','ATENCION_INMEDIATA', 'ESCALADA', 'DELEGADA', 'RESUELTA')),
     CONSTRAINT ck_pqrs_prioridad CHECK (prioridad IN ('BAJA', 'MEDIA', 'ALTA', 'CRITICA')),
+    CONSTRAINT ck_pqrs_categoria_resolucion CHECK (categoria_resolucion IN ('SOLUCIONADO', 'INFORMACION_BRINDADA',
+        'COMPENSACION_APLICADA', 'NO_PROCEDE', 'DUPLICADO', 'SIN_RESPUESTA')),
     CONSTRAINT fk_pqrs_cliente FOREIGN KEY (cliente_id) REFERENCES cliente (id),
     CONSTRAINT fk_pqrs_tipo FOREIGN KEY (tipo_consulta_id) REFERENCES tipo_consulta (id),
     CONSTRAINT fk_pqrs_responsable FOREIGN KEY (responsable_id) REFERENCES usuario (id),
@@ -142,3 +145,8 @@ ALTER TABLE tipo_consulta DROP CONSTRAINT IF EXISTS ck_tipo_categoria;
 ALTER TABLE tipo_consulta ADD CONSTRAINT ck_tipo_categoria CHECK (categoria IN ('PEDIDOS', 'ENVIOS_ENTREGAS',
     'PRODUCTOS_USO', 'REACCIONES', 'CAMBIOS_DEVOLUCIONES', 'PAGOS_FACTURACION', 'ATENCION_QUEJAS',
     'SUGERENCIAS_FELICITACIONES', 'POR_CLASIFICAR'));
+-- E5-13: categoría con la que se resuelve un caso (nula mientras el caso no esté resuelto)
+ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS categoria_resolucion VARCHAR(40);
+ALTER TABLE pqrs DROP CONSTRAINT IF EXISTS ck_pqrs_categoria_resolucion;
+ALTER TABLE pqrs ADD CONSTRAINT ck_pqrs_categoria_resolucion CHECK (categoria_resolucion IN ('SOLUCIONADO',
+    'INFORMACION_BRINDADA', 'COMPENSACION_APLICADA', 'NO_PROCEDE', 'DUPLICADO', 'SIN_RESPUESTA'));

@@ -30,6 +30,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import co.edu.unal.apolo.dominio.Canal;
+import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.Categoria;
 import co.edu.unal.apolo.dominio.Cliente;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
@@ -41,6 +42,7 @@ import co.edu.unal.apolo.dominio.TipoConsulta;
 import co.edu.unal.apolo.servicios.DetalleCaso;
 import co.edu.unal.apolo.servicios.DetalleCaso.MensajeVista;
 import co.edu.unal.apolo.servicios.DetalleCaso.PasoVista;
+import co.edu.unal.apolo.servicios.DetalleCaso.ResolucionVista;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.RecursoNoEncontradoException;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
@@ -180,7 +182,8 @@ class CasoControllerTest {
                 new PasoVista(PasoProtocolo.SUSPENDER_USO, true, LocalDateTime.of(2026, 11, 4, 9, 30), "Operador Uno"),
                 new PasoVista(PasoProtocolo.SOLICITAR_FOTOS, false, null, null));
         when(pqrsService.detalle(10L, CORREO)).thenReturn(new DetalleCaso(base.pqrs(), base.mensajes(), base.bitacora(),
-                base.diasHabilesRestantes(), false, false, true, null, protocolo, true));
+                base.diasHabilesRestantes(), false, false, true, null, protocolo, true,
+                false, "Toma el caso antes de resolverlo", null));
 
         mockMvc.perform(get("/pqrs/10"))
                 .andExpect(status().isOk())
@@ -191,6 +194,99 @@ class CasoControllerTest {
                 .andExpect(content().string(containsString("/pqrs/10/protocolo/SOLICITAR_FOTOS")))
                 .andExpect(content().string(containsString("Marcar completado")))
                 .andExpect(content().string(not(containsString("Toma el caso para completar los pasos."))));
+    }
+
+    @Test
+    void resolverLlamaAlServicioConLosDatosDelFormularioYVuelveAlCaso() throws Exception {
+        mockMvc.perform(post("/pqrs/10/resolver").with(csrf())
+                        .param("categoria", "SOLUCIONADO")
+                        .param("nota", "Se envió el cambio."))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attributeExists("mensajeOk"));
+
+        verify(pqrsService).resolverCaso(10L, CORREO, CategoriaResolucion.SOLUCIONADO, "Se envió el cambio.");
+    }
+
+    @Test
+    void resolverSinCategoriaVuelveAlFormularioConElError() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalleParaResolver(true, null, null));
+
+        mockMvc.perform(post("/pqrs/10/resolver").with(csrf()).param("nota", "Listo"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("caso"))
+                .andExpect(content().string(containsString("Elige la categoría de la resolución")));
+
+        verify(pqrsService, never()).resolverCaso(any(), any(), any(), any());
+    }
+
+    @Test
+    void resolverSinNotaVuelveAlFormularioConElError() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalleParaResolver(true, null, null));
+
+        mockMvc.perform(post("/pqrs/10/resolver").with(csrf()).param("categoria", "NO_PROCEDE").param("nota", "  "))
+                .andExpect(status().isOk())
+                .andExpect(view().name("caso"))
+                .andExpect(content().string(containsString("Escribe la nota de resolución")));
+
+        verify(pqrsService, never()).resolverCaso(any(), any(), any(), any());
+    }
+
+    @Test
+    void siElServicioRechazaResolverSeMuestraElMotivo() throws Exception {
+        doThrow(new ReglaNegocioException("Completa el protocolo crítico antes de resolver el caso"))
+                .when(pqrsService).resolverCaso(10L, CORREO, CategoriaResolucion.SOLUCIONADO, "Listo");
+
+        mockMvc.perform(post("/pqrs/10/resolver").with(csrf()).param("categoria", "SOLUCIONADO").param("nota", "Listo"))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeError", "Completa el protocolo crítico antes de resolver el caso"));
+    }
+
+    @Test
+    void resolverSinTokenCsrfEsRechazado() throws Exception {
+        mockMvc.perform(post("/pqrs/10/resolver").param("categoria", "SOLUCIONADO").param("nota", "Listo"))
+                .andExpect(status().isForbidden());
+
+        verify(pqrsService, never()).resolverCaso(any(), any(), any(), any());
+    }
+
+    @Test
+    void unCasoQuePuedeResolverseMuestraElFormularioConTodasLasCategorias() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalleParaResolver(true, null, null));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Resolver caso")))
+                .andExpect(content().string(containsString("/pqrs/10/resolver")))
+                .andExpect(content().string(containsString("Categoría de la resolución")))
+                .andExpect(content().string(containsString("no la ve la persona cliente")))
+                .andExpect(content().string(containsString(CategoriaResolucion.SOLUCIONADO.getEtiqueta())))
+                .andExpect(content().string(containsString(CategoriaResolucion.SIN_RESPUESTA.getEtiqueta())))
+                .andExpect(model().attributeExists("categoriasResolucion", "resolucionFormulario", "formulario"));
+    }
+
+    @Test
+    void siNoSePuedeResolverSeExplicaElMotivo() throws Exception {
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(
+                detalleParaResolver(false, "Completa el protocolo crítico antes de resolver el caso", null));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Completa el protocolo crítico antes de resolver el caso")));
+    }
+
+    @Test
+    void unCasoResueltoMuestraLaResolucionYYaNoElFormulario() throws Exception {
+        ResolucionVista resolucion = new ResolucionVista(CategoriaResolucion.NO_PROCEDE, "Fuera de la política de cambios.",
+                LocalDateTime.of(2026, 11, 4, 16, 45), "Operador Uno");
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(detalleParaResolver(false, "El caso ya fue resuelto", resolucion));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Resolución")))
+                .andExpect(content().string(containsString(CategoriaResolucion.NO_PROCEDE.getEtiqueta())))
+                .andExpect(content().string(containsString("Fuera de la política de cambios.")))
+                .andExpect(content().string(containsString("Operador Uno · 04/11/2026 16:45")))
+                .andExpect(content().string(not(containsString("/pqrs/10/resolver"))));
     }
 
     private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo) {
@@ -212,6 +308,12 @@ class CasoControllerTest {
         MensajeVista mensaje = new MensajeVista(LocalDateTime.of(2026, 11, 3, 10, 0), DireccionMensaje.ENTRANTE,
                 "Me salió enrojecimiento con el sérum", "Hola, me salió enrojecimiento y ardor.", false, null);
         return new DetalleCaso(pqrs, List.of(mensaje), List.of(), 4, criticoSinAsignar, puedeTomar, puedeResponder, motivo,
-                List.of(), false);
+                List.of(), false, puedeResponder, puedeResponder ? null : "Toma el caso antes de resolverlo", null);
+    }
+
+    private DetalleCaso detalleParaResolver(boolean puedeResolver, String motivoNoResolver, ResolucionVista resolucion) {
+        DetalleCaso base = detalle(false, false, true, null);
+        return new DetalleCaso(base.pqrs(), base.mensajes(), base.bitacora(), base.diasHabilesRestantes(), false, false,
+                true, null, base.protocolo(), false, puedeResolver, motivoNoResolver, resolucion);
     }
 }

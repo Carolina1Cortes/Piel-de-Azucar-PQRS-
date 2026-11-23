@@ -152,3 +152,7 @@ MERGE INTO festivo (fecha, nombre) KEY (fecha) VALUES
     ('2027-12-08', 'Inmaculada Concepción'),
     ('2027-12-25', 'Navidad');
 
+
+-- E5-13: categoría de los casos de prueba que ya vienen resueltos
+UPDATE pqrs SET categoria_resolucion = 'INFORMACION_BRINDADA' WHERE id = 3 AND categoria_resolucion IS NULL;
+UPDATE pqrs SET categoria_resolucion = 'SOLUCIONADO' WHERE id = 6 AND categoria_resolucion IS NULL;
