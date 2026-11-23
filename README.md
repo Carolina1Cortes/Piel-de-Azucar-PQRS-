@@ -216,8 +216,8 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 | Toma y autoasignación de casos | Implementada |
 | Respuesta mediante canal simulado | Implementada |
 | Registro de acciones en bitácora | Implementado |
-| Bitácora de cada cambio de estado (fecha, usuario, acción y cambio de estado) | Implementada (hoy el único cambio de estado disponible es tomar el caso; resolver, escalar y delegar usarán el mismo mecanismo) |
-| Notas internas (solo equipo, no visibles para la persona cliente) | Implementadas; la exigencia de nota al resolver o escalar queda lista en el servicio y se activa cuando existan esas acciones en la interfaz |
+| Bitácora de cada cambio de estado (fecha, usuario, acción y cambio de estado) | Implementada (tomar y resolver un caso pasan por el mismo mecanismo; escalar y delegar lo usarán cuando existan en la interfaz) |
+| Notas internas (solo equipo, no visibles para la persona cliente) | Implementadas: se pueden agregar en cualquier momento y son obligatorias al resolver un caso; escalar las exigirá cuando exista en la interfaz |
 | Radicado y confirmación de recepción | Implementada |
 | Lista de chequeo del protocolo crítico | Implementada |
 | Clasificación automática por palabras clave (`ClasificacionService`) | Implementada como servicio (E5-07); falta conectarla al simulador (E5-08) |
@@ -236,6 +236,8 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 - **Administración de operadores:** el bloqueo de usuarios está contemplado en la lógica, pero no existe una pantalla para administrarlo.
 - **Concurrencia:** todavía no hay control optimista de concurrencia para impedir que dos operadores tomen simultáneamente el mismo caso.
 - **Visibilidad de casos:** cualquier usuario autenticado puede consultar cualquier caso; no existe todavía un filtro de lectura por responsable o rol.
+
+El estado de cada elemento comprometido en la Entrega 5 está en [docs/ENTREGA_5.md](docs/ENTREGA_5.md).
 
 Las funcionalidades pendientes se encuentran identificadas en el backlog del proyecto y corresponden a trabajo posterior o a elementos adicionales que no forman parte del alcance implementado en este incremento.
 
