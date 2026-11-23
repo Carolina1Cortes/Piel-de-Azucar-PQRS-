@@ -193,6 +193,12 @@ La suite contempla distintos niveles de prueba:
 
 Entre las pruebas se encuentran `PqrsServiceTest`, `DiasHabilesServiceTest`, `EntradaSimuladaServiceTest`, `RepositoriosTest`, `InicioControllerTest`, `CasoControllerTest`, `SimuladorControllerTest`, `SeguridadIntegracionTest`, `FlujoCasoCriticoIntegracionTest` y `ApoloApplicationTests`.
 
+## Datos de referencia y fuentes
+
+- **Festivos (2026 y 2027):** [Ley 51 de 1983 (Ley Emiliani)](https://www.secretariasenado.gov.co/senado/basedoc/ley_0051_1983.html); [Ley 2578 de 2026 (festivo Virgen de Chiquinquirá)](https://dapre.presidencia.gov.co/normativa/normativa/LEY%20No.%202578%20DEL%2001%20DE%20JUNIO%20DE%202026.pdf); fechas contrastadas con [Hacé Cuentas](https://hacecuentas.com/feriados-colombia-2027) (CC-BY 4.0; el sitio también tiene la página de 2026).
+- **Tipos de consulta:** "Tabla de clasificación de PQRS" entregada por Paula Mesa (Piel de Azúcar). Cuando la tabla ofrece dos opciones de automatización, se carga la más conservadora.
+- **Fecha de verificación:** 22/11/2026.
+
 ## Alcance actual y funcionalidades pendientes
 
 El estado de las funcionalidades debe interpretarse según el incremento documentado (Sprint 1, Incremento 1).
@@ -225,7 +231,6 @@ El estado de las funcionalidades debe interpretarse según el incremento documen
 - **Administración de operadores:** el bloqueo de usuarios está contemplado en la lógica, pero no existe una pantalla para administrarlo.
 - **Concurrencia:** todavía no hay control optimista de concurrencia para impedir que dos operadores tomen simultáneamente el mismo caso.
 - **Visibilidad de casos:** cualquier usuario autenticado puede consultar cualquier caso; no existe todavía un filtro de lectura por responsable o rol.
-- **Datos de referencia:** los tipos de consulta y los festivos cargados inicialmente son provisionales y deben contrastarse con la clasificación oficial y el calendario colombiano vigente. La exactitud de estos datos afecta el cálculo de los plazos.
 
 Las funcionalidades pendientes se encuentran identificadas en el backlog del proyecto y corresponden a trabajo posterior o a elementos adicionales que no forman parte del alcance implementado en este incremento.
 
@@ -256,5 +261,5 @@ Consultar [`CONVENCIONES.md`](CONVENCIONES.md).
 
 Durante el Sprint 1 el equipo usó **Claude (Anthropic)** como herramienta de apoyo. Se utilizó para generar el andamiaje inicial a partir del documento de contexto del proyecto: estructura de paquetes, `pom.xml`, entidades, repositorios, `schema.sql`, `data.sql`, pruebas y borradores de la documentación.
  
-Todo el código fue revisado, ejecutado y ajustado por el equipo, que responde por él. Los datos de `tipo_consulta` y el calendario de festivos son reconstrucciones provisionales que deben contrastarse con la tabla oficial de clasificación y con el calendario de Colombia.
+Todo el código fue revisado, ejecutado y ajustado por el equipo, que responde por él.
  

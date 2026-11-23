@@ -70,6 +70,28 @@ class RepositoriosTest {
     }
 
     @Test
+    void elCatalogoTieneLos36TiposDeLaTablaOficialYElDePorClasificar() {
+        assertThat(tipoConsultaRepository.count()).isEqualTo(37);
+        assertThat(tipoConsultaRepository.findAll())
+                .filteredOn(tipo -> tipo.getCategoria() != Categoria.POR_CLASIFICAR)
+                .hasSize(36);
+        tipoConsultaRepository.findAll().forEach(tipo -> {
+            assertThat(tipo.getCategoria()).isNotNull();
+            assertThat(tipo.getPrioridadPorDefecto()).isNotNull();
+            assertThat(tipo.getAutomatizacion()).isNotNull();
+        });
+    }
+
+    @Test
+    void soloLasReaccionesSonCriticas() {
+        assertThat(tipoConsultaRepository.findAll())
+                .filteredOn(tipo -> tipo.getPrioridadPorDefecto() == Prioridad.CRITICA)
+                .allMatch(tipo -> tipo.getCategoria() == Categoria.REACCIONES)
+                .extracting(tipo -> tipo.getId())
+                .containsExactlyInAnyOrder(16L, 17L, 18L, 19L);
+    }
+
+    @Test
     void lasReaccionesSonCriticasYDeAtencionHumana() {
         tipoConsultaRepository.findByCategoria(Categoria.REACCIONES).forEach(tipo -> {
             assertThat(tipo.getPrioridadPorDefecto()).isEqualTo(Prioridad.CRITICA);
@@ -175,12 +197,18 @@ class RepositoriosTest {
         assertThat(festivoRepository.findByFechaBetweenOrderByFecha(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 11, 30)))
                 .extracting(f -> f.getFecha().toString())
                 .containsExactly("2026-10-12", "2026-11-02", "2026-11-16");
+        assertThat(festivoRepository.findByFechaBetweenOrderByFecha(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)))
+                .hasSize(19);
+        assertThat(festivoRepository.findByFechaBetweenOrderByFecha(LocalDate.of(2027, 1, 1), LocalDate.of(2027, 12, 31)))
+                .hasSize(19);
+        assertThat(festivoRepository.existsById(LocalDate.of(2026, 7, 13))).isTrue();
+        assertThat(festivoRepository.existsById(LocalDate.of(2027, 7, 12))).isTrue();
     }
 
     @Test
     void listaSoloPlantillasActivas() {
         assertThat(plantillaRepository.findByActivaTrue()).hasSize(4);
-        assertThat(plantillaRepository.findByTipoConsultaId(5L)).hasSize(1);
+        assertThat(plantillaRepository.findByTipoConsultaId(11L)).hasSize(1);
     }
 
     // ---------- restricciones del esquema
