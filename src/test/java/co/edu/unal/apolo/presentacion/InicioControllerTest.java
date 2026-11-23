@@ -71,7 +71,7 @@ class InicioControllerTest {
     }
 
     @Test
-    void laBandejaMuestraIdClientaCategoriaPrioridadEstadoYPlazoEnDiasHabiles() throws Exception {
+    void laBandejaMuestraIdClienteCategoriaPrioridadEstadoYPlazoEnDiasHabiles() throws Exception {
         when(pqrsService.listar(false)).thenReturn(List.of(
                 new ResumenPqrs(pqrs(2L, "Valentina Ortiz", Prioridad.CRITICA, EstadoPqrs.PENDIENTE), 4),
                 new ResumenPqrs(pqrs(7L, "Camila Rojas", Prioridad.ALTA, EstadoPqrs.EN_ATENCION), -3)));
@@ -87,6 +87,7 @@ class InicioControllerTest {
                 .andExpect(content().string(containsString("Vencida hace 3 día(s) hábil(es)")))
                 .andExpect(content().string(containsString("/pqrs/2")));
     }
+
 
     @Test
     void laBandejaMuestraElCanalDeOrigenDeCadaCaso() throws Exception {
@@ -110,9 +111,10 @@ class InicioControllerTest {
                 .andExpect(content().string(containsString("Camila Rojas")));
     }
 
-    private Pqrs pqrs(Long id, String clienta, Prioridad prioridad, EstadoPqrs estado) {
+    private Pqrs pqrs(Long id, String nombreCliente, Prioridad prioridad, EstadoPqrs estado) {
+
         Cliente cliente = new Cliente();
-        cliente.setNombre(clienta);
+        cliente.setNombre(nombreCliente);
         TipoConsulta tipo = new TipoConsulta();
         tipo.setCategoria(Categoria.REACCIONES);
         Pqrs pqrs = new Pqrs();

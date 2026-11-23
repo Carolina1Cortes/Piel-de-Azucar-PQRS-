@@ -18,7 +18,7 @@ public class CanalSimulado implements CanalMensajeria {
 
     @Override
     public void enviar(Mensaje mensaje) {
-        LOG.info("[CANAL SIMULADO] Mensaje '{}' enviado a la clienta de la PQRS {}",
+        LOG.info("[CANAL SIMULADO] Mensaje '{}' enviado a la persona cliente de la PQRS {}",
                 mensaje.getAsunto(), mensaje.getPqrs().getId());
     }
 }

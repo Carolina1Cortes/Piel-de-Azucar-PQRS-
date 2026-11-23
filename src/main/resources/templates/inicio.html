@@ -29,7 +29,7 @@
                 <th>Radicado</th>
                 <th>Canal</th>
                 <th>Asunto</th>
-                <th>Clienta</th>
+                <th>Cliente</th>
                 <th>Categoría</th>
                 <th>Prioridad</th>
                 <th>Estado</th>
@@ -43,7 +43,7 @@
                 <td th:text="${r.pqrs().radicado != null} ? ${r.pqrs().radicado} : '—'">—</td>
                 <td th:text="${r.pqrs().canal != null} ? ${r.pqrs().canal.etiqueta} : '—'">Gmail</td>
                 <td><a th:href="@{/pqrs/{id}(id=${r.pqrs().id})}" th:text="${r.pqrs().asunto}">Asunto</a></td>
-                <td th:text="${r.pqrs().cliente.nombre}">Clienta</td>
+                <td th:text="${r.pqrs().cliente.nombre}">Cliente</td>
                 <td th:text="${r.pqrs().tipoConsulta.categoria.etiqueta}">Categoría</td>
                 <td><span class="etiqueta" th:classappend="'prio-' + ${r.pqrs().prioridad.name().toLowerCase()}" th:text="${r.pqrs().prioridad.etiqueta}">Media</span></td>
                 <td><span class="etiqueta" th:classappend="'estado-' + ${r.pqrs().estado.name().toLowerCase()}" th:text="${r.pqrs().estado.etiqueta}">Pendiente</span></td>

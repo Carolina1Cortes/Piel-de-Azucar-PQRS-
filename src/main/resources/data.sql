@@ -19,26 +19,27 @@ MERGE INTO cliente (id, nombre, correo, telefono) KEY (id) VALUES
     (6, 'Natalia Prieto', 'natalia.prieto@example.com', NULL);
 
 -- PROVISIONAL: reconstruido del contexto. Reemplazar por la tabla oficial de clasificación entregada por el equipo.
-MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, automatizacion) KEY (id) VALUES
-    (1, 'Estado de un pedido', 'PEDIDOS', 'MEDIA', 'AUTOMATICA'),
-    (2, 'Modificar o cancelar un pedido', 'PEDIDOS', 'ALTA', 'ASISTIDA'),
-    (3, 'Seguimiento de un envío', 'ENVIOS_ENTREGAS', 'MEDIA', 'AUTOMATICA'),
-    (4, 'Pedido incompleto, dañado o no entregado', 'ENVIOS_ENTREGAS', 'ALTA', 'ATENCION_HUMANA'),
-    (5, 'Modo de uso de un producto', 'PRODUCTOS_USO', 'BAJA', 'AUTOMATICA'),
-    (6, 'Recomendación según tipo de piel', 'PRODUCTOS_USO', 'MEDIA', 'ASISTIDA'),
-    (7, 'Enrojecimiento, irritación o alergia', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA'),
-    (8, 'Molestia tras el uso de un producto', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA'),
-    (9, 'Solicitud de cambio o devolución', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ASISTIDA'),
-    (10, 'Garantía por producto defectuoso', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ATENCION_HUMANA'),
-    (11, 'Métodos de pago', 'PAGOS_FACTURACION', 'BAJA', 'AUTOMATICA'),
-    (12, 'Cobro duplicado o error en factura', 'PAGOS_FACTURACION', 'ALTA', 'ATENCION_HUMANA'),
-    (13, 'Queja por el servicio', 'ATENCION_QUEJAS', 'ALTA', 'ATENCION_HUMANA'),
-    (14, 'Información general y horarios', 'ATENCION_QUEJAS', 'BAJA', 'AUTOMATICA'),
-    (15, 'Sugerencia', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO'),
-    (16, 'Felicitación', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO');
+MERGE INTO tipo_consulta (id, descripcion, categoria, prioridad_por_defecto, automatizacion, palabras_clave) KEY (id) VALUES
+    (1, 'Estado de un pedido', 'PEDIDOS', 'MEDIA', 'AUTOMATICA', 'estado de mi pedido,estado del pedido,mi pedido,numero de pedido,estado de la orden'),
+    (2, 'Modificar o cancelar un pedido', 'PEDIDOS', 'ALTA', 'ASISTIDA', 'cancelar,cancelacion,modificar mi pedido,cambiar la direccion,cambiar mi direccion,agregar al pedido'),
+    (3, 'Seguimiento de un envío', 'ENVIOS_ENTREGAS', 'MEDIA', 'AUTOMATICA', 'cuando llega,no llega,seguimiento,rastreo,guia,envio,transportadora,despacho,tracking'),
+    (4, 'Pedido incompleto, dañado o no entregado', 'ENVIOS_ENTREGAS', 'ALTA', 'ATENCION_HUMANA', 'incompleto,danado,roto,faltante,falto,equivocado,no llego,no recibi,solo llegaron'),
+    (5, 'Modo de uso de un producto', 'PRODUCTOS_USO', 'BAJA', 'AUTOMATICA', 'modo de uso,como uso,como usar,como aplico,como debo aplicar,cuantas veces,rutina,instrucciones'),
+    (6, 'Recomendación según tipo de piel', 'PRODUCTOS_USO', 'MEDIA', 'ASISTIDA', 'recomienda,recomendacion,recomendar,tipo de piel,piel grasa,piel seca,piel mixta,piel sensible'),
+    (7, 'Enrojecimiento, irritación o alergia', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA', 'enroj,irrita,alerg,ardor,me arde,picazon,sarpullido,ronchas,hinchaz,inflamaci,quemadura,dermatitis,brote'),
+    (8, 'Molestia tras el uso de un producto', 'REACCIONES', 'CRITICA', 'ATENCION_HUMANA', 'molestia,malestar,me hizo mal,me siento mal,resequedad,reseca,descama,tirante,me pico,me ardio'),
+    (9, 'Solicitud de cambio o devolución', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ASISTIDA', 'cambio,cambiar,devol,reembols,no me funciono,no me gusto'),
+    (10, 'Garantía por producto defectuoso', 'CAMBIOS_DEVOLUCIONES', 'ALTA', 'ATENCION_HUMANA', 'garantia,defectuos,defecto,fabrica,vencid,caduc'),
+    (11, 'Métodos de pago', 'PAGOS_FACTURACION', 'BAJA', 'AUTOMATICA', 'metodos de pago,medios de pago,formas de pago,como pago,pse,nequi,daviplata,contraentrega,cuotas'),
+    (12, 'Cobro duplicado o error en factura', 'PAGOS_FACTURACION', 'ALTA', 'ATENCION_HUMANA', 'cobr,cargo,doble cobro,dos veces,factura,descontaron,debitaron'),
+    (13, 'Queja por el servicio', 'ATENCION_QUEJAS', 'ALTA', 'ATENCION_HUMANA', 'queja,mal trato,maltrato,groser,mala atencion,pesim,inconforme,insatisfech,irrespet,reclamo'),
+    (14, 'Información general y horarios', 'ATENCION_QUEJAS', 'BAJA', 'AUTOMATICA', 'horario,ubicacion,tienda fisica,puntos de venta,sucursal,donde estan,atienden,informacion'),
+    (15, 'Sugerencia', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO', 'sugerenc,sugier,sugerir,deberian,seria bueno,me gustaria que'),
+    (16, 'Felicitación', 'SUGERENCIAS_FELICITACIONES', 'BAJA', 'REGISTRO', 'felicit,agradezc,agradec,excelente,me encanto,muy bien'),
+    (17, 'Por clasificar manualmente', 'POR_CLASIFICAR', 'MEDIA', 'ATENCION_HUMANA', NULL);
 
 MERGE INTO plantilla_respuesta (id, nombre, asunto, cuerpo, palabras_clave, tipo_consulta_id, activa) KEY (id) VALUES
-    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos atentas.', 'pedido,estado,orden', 1, TRUE),
+    (1, 'Estado de pedido', 'Estado de tu pedido en Piel de Azúcar', 'Hola {nombre}, gracias por escribirnos. Tu pedido está en proceso y te avisaremos apenas salga. Cualquier duda, estamos pendientes.', 'pedido,estado,orden', 1, TRUE),
     (2, 'Modo de uso', 'Cómo usar tu producto', 'Hola {nombre}, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'uso,aplicar,rutina,modo', 5, TRUE),
     (3, 'Solicitud de cambio o devolución', 'Tu solicitud de cambio o devolución', 'Hola {nombre}, recibimos tu solicitud. Para continuar, cuéntanos el número de pedido y envíanos una foto del producto.', 'cambio,devolucion,devolver', 9, TRUE),
     (4, 'Agradecimiento por sugerencia o felicitación', '¡Gracias por escribirnos!', 'Hola {nombre}, gracias por tu mensaje. Lo compartiremos con todo el equipo de Piel de Azúcar.', 'gracias,felicitacion,sugerencia', 16, TRUE);
@@ -59,7 +60,7 @@ MERGE INTO mensaje (id, pqrs_id, fecha, asunto, cuerpo, direccion, automatico, a
     (3, 3, '2026-10-14 08:00:00', '¿Cómo uso el ácido hialurónico?', 'Buenos días, ¿cómo debo aplicar el ácido hialurónico?', 'ENTRANTE', FALSE, NULL),
     (4, 4, '2026-10-13 10:00:00', 'Quiero devolver mi crema hidratante', 'Compré la crema hidratante y no me funcionó, quisiera devolverla.', 'ENTRANTE', FALSE, NULL),
     (5, 5, '2026-10-09 11:00:00', 'Me cobraron dos veces mi pedido', 'Veo dos cargos iguales en mi tarjeta por el mismo pedido.', 'ENTRANTE', FALSE, NULL),
-    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlas, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
+    (6, 6, '2026-10-08 16:00:00', 'Felicitaciones por su atención', 'Quería felicitarlos, me atendieron muy bien y mi pedido llegó perfecto.', 'ENTRANTE', FALSE, NULL),
     (7, 7, '2026-09-28 14:30:00', 'Mi pedido llegó incompleto', 'Pedí tres productos y solo llegaron dos.', 'ENTRANTE', FALSE, NULL),
     (8, 8, '2026-10-20 12:10:00', 'Queja por mal trato en la línea de atención', 'Me atendieron de forma muy grosera cuando llamé a preguntar por mi pedido.', 'ENTRANTE', FALSE, NULL),
     (9, 3, '2026-10-14 08:02:00', 'Cómo usar tu producto', 'Hola Daniela, te compartimos el modo de uso recomendado: aplica sobre el rostro limpio y seco, y complementa con protector solar durante el día.', 'SALIENTE', TRUE, NULL),
