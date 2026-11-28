@@ -27,6 +27,9 @@ a { color:var(--acento); }
          font-size:.9rem; cursor:pointer; text-decoration:none; }
 .boton.secundario { background:#fff; color:var(--acento); border:1px solid var(--acento); }
 .boton:disabled { background:#cfc7d6; cursor:not-allowed; }
+input[type=file]::file-selector-button { padding:.5rem 1rem; margin-right:.6rem; border:0; border-radius:6px;
+         background:var(--acento); color:#fff; font-size:.9rem; font-family:inherit; cursor:pointer; }
+input[type=file]:disabled::file-selector-button { background:#cfc7d6; cursor:not-allowed; }
 .filtros { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin:1rem 0; }
 .filtros a:not(.boton) { padding:.35rem .9rem; border:1px solid var(--linea); border-radius:16px; background:#fff;
                          color:var(--texto); text-decoration:none; font-size:.88rem; }
