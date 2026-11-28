@@ -210,6 +210,15 @@ class RepositoriosTest {
     }
 
     @Test
+    void recuperaLosAdjuntosDeTodosLosMensajesDeUnCaso() {
+        Long pqrsId = pqrsRepository.findByIdExterno("gmail-msg-002").orElseThrow().getId();
+
+        assertThat(adjuntoRepository.findByMensajePqrsId(pqrsId))
+                .extracting(Adjunto::getNombreArchivo)
+                .containsExactly("foto_enrojecimiento.jpg");
+    }
+
+    @Test
     void conoceLosFestivosDeColombia() {
         assertThat(festivoRepository.existsById(LocalDate.of(2026, 12, 25))).isTrue();
         assertThat(festivoRepository.findByFechaBetweenOrderByFecha(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 11, 30)))

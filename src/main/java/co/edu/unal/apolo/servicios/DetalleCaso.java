@@ -23,6 +23,7 @@ import co.edu.unal.apolo.dominio.TipoAccion;
  * @param motivoResolverBloqueado  por qué no puede resolverlo (nulo si puede)
  * @param resolucion               cómo se resolvió el caso (nulo mientras no esté resuelto)
  * @param motivoNotaBloqueada      por qué no puede agregar una nota interna (nulo si puede)
+ * @param tamanoMaximoAdjuntos     tamaño máximo de los adjuntos en el canal del caso, listo para mostrar (nulo si no aplica)
  */
 public record DetalleCaso(
         Pqrs pqrs,
@@ -38,16 +39,41 @@ public record DetalleCaso(
         boolean puedeResolver,
         String motivoResolverBloqueado,
         ResolucionVista resolucion,
-        String motivoNotaBloqueada) {
+        String motivoNotaBloqueada,
+        String tamanoMaximoAdjuntos) {
+
+    /** Sin información de adjuntos (se conserva para no romper a quien ya construía el detalle así). */
+    public DetalleCaso(Pqrs pqrs, List<MensajeVista> mensajes, List<RegistroVista> bitacora, int diasHabilesRestantes,
+                       boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder,
+                       String motivoRespuestaBloqueada, List<PasoVista> protocolo, boolean puedeCompletarPasos,
+                       boolean puedeResolver, String motivoResolverBloqueado, ResolucionVista resolucion,
+                       String motivoNotaBloqueada) {
+        this(pqrs, mensajes, bitacora, diasHabilesRestantes, criticoSinAsignar, puedeTomar, puedeResponder,
+                motivoRespuestaBloqueada, protocolo, puedeCompletarPasos, puedeResolver, motivoResolverBloqueado,
+                resolucion, motivoNotaBloqueada, null);
+    }
 
     /** El operador actual puede agregar una nota interna al caso. */
     public boolean puedeAgregarNota() {
         return motivoNotaBloqueada == null;
     }
 
-    /** Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas. */
+    /**
+     * Un mensaje de la conversación; {@code autor} es nulo para los correos de la persona cliente y las respuestas automáticas.
+     * {@code adjuntos} son los nombres de los archivos adjuntos (vacío si no tiene).
+     */
     public record MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
-                               boolean automatico, String autor) {
+                               boolean automatico, String autor, List<String> adjuntos) {
+
+        public MensajeVista {
+            adjuntos = adjuntos == null ? List.of() : List.copyOf(adjuntos);
+        }
+
+        /** Mensaje sin adjuntos. */
+        public MensajeVista(LocalDateTime fecha, DireccionMensaje direccion, String asunto, String cuerpo,
+                            boolean automatico, String autor) {
+            this(fecha, direccion, asunto, cuerpo, automatico, autor, List.of());
+        }
     }
 
     /** Una línea de la bitácora; {@code usuario} es nulo cuando la acción la hizo el sistema. */

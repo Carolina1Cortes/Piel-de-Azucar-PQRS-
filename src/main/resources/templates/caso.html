@@ -80,12 +80,16 @@
         </div>
         <div class="burbuja-asunto" th:if="${m.asunto() != null}" th:text="${m.asunto()}">Asunto</div>
         <p th:text="${m.cuerpo()}">Texto del mensaje</p>
+        <ul class="adjuntos" th:if="${!#lists.isEmpty(m.adjuntos())}">
+            <li th:each="a : ${m.adjuntos()}" th:text="'📎 ' + ${a}">📎 guia_modo_de_uso.pdf</li>
+        </ul>
     </div>
     <p class="nota" th:if="${#lists.isEmpty(caso.mensajes())}">Todavía no hay mensajes.</p>
 
     <h3>Responder a la persona cliente</h3>
     <p class="nota" th:if="${!caso.puedeResponder()}" th:text="${caso.motivoRespuestaBloqueada()}">Motivo</p>
-    <form th:action="@{/pqrs/{id}/responder(id=${caso.pqrs().id})}" th:object="${formulario}" method="post" class="formulario">
+    <form th:action="@{/pqrs/{id}/responder(id=${caso.pqrs().id})}" th:object="${formulario}" method="post"
+          enctype="multipart/form-data" class="formulario">
         <label for="asunto">Asunto (opcional)</label>
         <input id="asunto" type="text" th:field="*{asunto}" th:disabled="${!caso.puedeResponder()}">
 
@@ -93,6 +97,15 @@
         <textarea id="cuerpo" rows="6" th:field="*{cuerpo}" th:disabled="${!caso.puedeResponder()}"></textarea>
         <p class="error-campo" th:if="${#fields.hasErrors('cuerpo')}" th:errors="*{cuerpo}">Error</p>
         <p class="error-campo" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}">Error</p>
+
+        <label for="adjuntos">Adjuntos (opcional)</label>
+        <input id="adjuntos" type="file" name="adjuntos" multiple
+               accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+               th:disabled="${!caso.puedeResponder()}">
+        <p class="nota">
+            Imágenes JPG o PNG y documentos PDF, hasta 5 archivos<span th:if="${caso.tamanoMaximoAdjuntos() != null}"
+                th:text="' y ' + ${caso.tamanoMaximoAdjuntos()} + ' en total por mensaje (' + ${caso.pqrs().canal.etiqueta} + ')'"> y 10 MB en total por mensaje (Gmail)</span>.
+        </p>
 
         <button class="boton" type="submit" th:disabled="${!caso.puedeResponder()}">Enviar respuesta</button>
     </form>
