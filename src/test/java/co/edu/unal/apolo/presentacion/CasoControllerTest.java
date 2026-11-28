@@ -1,5 +1,6 @@
 package co.edu.unal.apolo.presentacion;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -23,9 +25,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -40,6 +44,7 @@ import co.edu.unal.apolo.dominio.Pqrs;
 import co.edu.unal.apolo.dominio.Prioridad;
 import co.edu.unal.apolo.dominio.TipoAccion;
 import co.edu.unal.apolo.dominio.TipoConsulta;
+import co.edu.unal.apolo.servicios.ArchivoAdjunto;
 import co.edu.unal.apolo.servicios.DetalleCaso;
 import co.edu.unal.apolo.servicios.DetalleCaso.MensajeVista;
 import co.edu.unal.apolo.servicios.DetalleCaso.PasoVista;
@@ -133,7 +138,8 @@ class CasoControllerTest {
                 .andExpect(redirectedUrl("/pqrs/10"))
                 .andExpect(flash().attributeExists("mensajeOk"));
 
-        verify(pqrsService).enviarRespuesta(10L, CORREO, "Sobre tu reacción", "Hola Valentina, lamentamos lo ocurrido.");
+        verify(pqrsService).enviarRespuesta(10L, CORREO, "Sobre tu reacción", "Hola Valentina, lamentamos lo ocurrido.",
+                List.of());
     }
 
     @Test
@@ -145,13 +151,13 @@ class CasoControllerTest {
                 .andExpect(view().name("caso"))
                 .andExpect(model().attributeHasFieldErrors("formulario", "cuerpo"));
 
-        verify(pqrsService, never()).enviarRespuesta(any(), any(), any(), any());
+        verify(pqrsService, never()).enviarRespuesta(any(), any(), any(), any(), any());
     }
 
     @Test
     void siElServicioRechazaElEnvioSeMuestraElMotivo() throws Exception {
         doThrow(new ReglaNegocioException("Caso crítico: toma el caso antes de responder"))
-                .when(pqrsService).enviarRespuesta(10L, CORREO, null, "Hola");
+                .when(pqrsService).enviarRespuesta(10L, CORREO, null, "Hola", List.of());
 
         mockMvc.perform(post("/pqrs/10/responder").with(csrf()).param("cuerpo", "Hola"))
                 .andExpect(redirectedUrl("/pqrs/10"))
@@ -391,6 +397,68 @@ class CasoControllerTest {
 
     private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo) {
         return detalle(criticoSinAsignar, puedeTomar, puedeResponder, motivo, null);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void responderConAdjuntosLosPasaAlServicio() throws Exception {
+        byte[] pdf = {'%', 'P', 'D', 'F', '-', '1'};
+        mockMvc.perform(multipart("/pqrs/10/responder")
+                        .file(new MockMultipartFile("adjuntos", "guia_modo_de_uso.pdf", "application/pdf", pdf))
+                        .file(new MockMultipartFile("adjuntos", "foto.png", "image/png", new byte[] {1, 2}))
+                        .param("cuerpo", "Te comparto la guía de uso.")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeOk", containsString("2 adjunto(s)")));
+
+        ArgumentCaptor<List<ArchivoAdjunto>> archivos = ArgumentCaptor.forClass(List.class);
+        verify(pqrsService).enviarRespuesta(eq(10L), eq(CORREO), any(), eq("Te comparto la guía de uso."),
+                archivos.capture());
+        assertThat(archivos.getValue()).extracting(ArchivoAdjunto::nombre)
+                .containsExactly("guia_modo_de_uso.pdf", "foto.png");
+        assertThat(archivos.getValue().get(0).contenido()).isEqualTo(pdf);
+    }
+
+    @Test
+    void responderSinElegirArchivosIgnoraElCampoVacioDelNavegador() throws Exception {
+        mockMvc.perform(multipart("/pqrs/10/responder")
+                        .file(new MockMultipartFile("adjuntos", "", "application/octet-stream", new byte[0]))
+                        .param("cuerpo", "Hola")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeOk", "Respuesta enviada por el canal simulado."));
+
+        verify(pqrsService).enviarRespuesta(10L, CORREO, null, "Hola", List.of());
+    }
+
+    @Test
+    void siUnAdjuntoSuperaElMaximoDelCanalSeMuestraElMotivo() throws Exception {
+        doThrow(new ReglaNegocioException("El archivo ficha.pdf pesa 12 MB y el máximo para Gmail es 10 MB"))
+                .when(pqrsService).enviarRespuesta(eq(10L), eq(CORREO), any(), eq("Hola"), any());
+
+        mockMvc.perform(multipart("/pqrs/10/responder")
+                        .file(new MockMultipartFile("adjuntos", "ficha.pdf", "application/pdf", new byte[] {1}))
+                        .param("cuerpo", "Hola")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/pqrs/10"))
+                .andExpect(flash().attribute("mensajeError", "El archivo ficha.pdf pesa 12 MB y el máximo para Gmail es 10 MB"));
+    }
+
+    @Test
+    void elFormularioDeRespuestaPermiteAdjuntarArchivosYMuestraLosAdjuntosDeLaConversacion() throws Exception {
+        DetalleCaso base = detalle(false, false, true, null);
+        MensajeVista conAdjunto = new MensajeVista(LocalDateTime.of(2026, 11, 3, 10, 0), DireccionMensaje.ENTRANTE,
+                "Me salió enrojecimiento con el sérum", "Adjunto una foto.", false, null, List.of("foto_enrojecimiento.jpg"));
+        when(pqrsService.detalle(10L, CORREO)).thenReturn(new DetalleCaso(base.pqrs(), List.of(conAdjunto),
+                base.bitacora(), base.diasHabilesRestantes(), false, false, true, null, base.protocolo(), false, true,
+                null, null, null, "10 MB"));
+
+        mockMvc.perform(get("/pqrs/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("multipart/form-data")))
+                .andExpect(content().string(containsString("type=\"file\"")))
+                .andExpect(content().string(containsString("10 MB en total por mensaje")))
+                .andExpect(content().string(containsString("foto_enrojecimiento.jpg")));
     }
 
     private DetalleCaso detalle(boolean criticoSinAsignar, boolean puedeTomar, boolean puedeResponder, String motivo,

@@ -1,6 +1,9 @@
 package co.edu.unal.apolo.presentacion;
 
+import java.io.IOException;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -10,12 +13,15 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 
 import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.PasoProtocolo;
+import co.edu.unal.apolo.servicios.ArchivoAdjunto;
 import co.edu.unal.apolo.servicios.PqrsService;
 import co.edu.unal.apolo.servicios.ReglaNegocioException;
 
@@ -69,6 +75,7 @@ public class CasoController {
     public String responder(@PathVariable Long id,
                             @Valid @ModelAttribute("formulario") RespuestaFormulario formulario,
                             BindingResult errores,
+                            @RequestParam(name = "adjuntos", required = false) List<MultipartFile> adjuntos,
                             Principal principal,
                             Model model,
                             RedirectAttributes redireccion) {
@@ -77,8 +84,14 @@ public class CasoController {
             return "caso";
         }
         try {
-            pqrsService.enviarRespuesta(id, principal.getName(), formulario.getAsunto(), formulario.getCuerpo());
-            redireccion.addFlashAttribute("mensajeOk", "Respuesta enviada por el canal simulado.");
+            List<ArchivoAdjunto> archivos = archivosDe(adjuntos);
+            pqrsService.enviarRespuesta(id, principal.getName(), formulario.getAsunto(), formulario.getCuerpo(),
+                    archivos);
+            redireccion.addFlashAttribute("mensajeOk", archivos.isEmpty()
+                    ? "Respuesta enviada por el canal simulado."
+                    : "Respuesta enviada por el canal simulado con " + archivos.size() + " adjunto(s).");
+        } catch (IOException e) {
+            redireccion.addFlashAttribute("mensajeError", "No se pudieron leer los adjuntos. Intenta de nuevo.");
         } catch (ReglaNegocioException e) {
             redireccion.addFlashAttribute("mensajeError", e.getMessage());
         }
@@ -123,6 +136,25 @@ public class CasoController {
             redireccion.addFlashAttribute("mensajeError", e.getMessage());
         }
         return "redirect:/pqrs/" + id;
+    }
+
+    /**
+     * Convierte los archivos del formulario al tipo que entiende el servicio. Se ignora el campo vacío que envía el
+     * navegador cuando no se elige ningún archivo; un archivo elegido pero vacío sí pasa, y el servicio lo rechaza.
+     */
+    private List<ArchivoAdjunto> archivosDe(List<MultipartFile> adjuntos) throws IOException {
+        List<ArchivoAdjunto> archivos = new ArrayList<>();
+        if (adjuntos == null) {
+            return archivos;
+        }
+        for (MultipartFile adjunto : adjuntos) {
+            String nombre = adjunto.getOriginalFilename();
+            if (nombre == null || nombre.isBlank()) {
+                continue;
+            }
+            archivos.add(new ArchivoAdjunto(nombre, adjunto.getBytes()));
+        }
+        return archivos;
     }
 
     /** Carga el caso y deja en el modelo los formularios (vacíos si no vienen ya con errores de validación). */

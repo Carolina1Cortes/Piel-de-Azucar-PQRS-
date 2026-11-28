@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import co.edu.unal.apolo.dominio.Adjunto;
 import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
@@ -46,6 +47,8 @@ public class PqrsService {
     private static final int LARGO_MAXIMO_ASUNTO = 300;
     /** Igual al largo de {@code registro_bitacora.notas_internas}. */
     static final int LARGO_MAXIMO_NOTA = 2000;
+    /** Igual al largo de {@code registro_bitacora.motivo}. */
+    private static final int LARGO_MAXIMO_MOTIVO = 1000;
 
     private final PqrsRepository pqrsRepository;
     private final UsuarioRepository usuarioRepository;
@@ -53,6 +56,7 @@ public class PqrsService {
     private final BitacoraRepository bitacoraRepository;
     private final CanalMensajeria canal;
     private final DiasHabilesService diasHabiles;
+    private final AdjuntoService adjuntoService;
     private final Clock reloj;
 
     public PqrsService(PqrsRepository pqrsRepository,
@@ -61,6 +65,7 @@ public class PqrsService {
                        BitacoraRepository bitacoraRepository,
                        CanalMensajeria canal,
                        DiasHabilesService diasHabiles,
+                       AdjuntoService adjuntoService,
                        Clock reloj) {
         this.pqrsRepository = pqrsRepository;
         this.usuarioRepository = usuarioRepository;
@@ -68,6 +73,7 @@ public class PqrsService {
         this.bitacoraRepository = bitacoraRepository;
         this.canal = canal;
         this.diasHabiles = diasHabiles;
+        this.adjuntoService = adjuntoService;
         this.reloj = reloj;
     }
 
@@ -95,9 +101,11 @@ public class PqrsService {
         Pqrs pqrs = buscarPorId(id);
         Usuario usuario = buscarUsuario(correoUsuario);
 
+        Map<Long, List<String>> adjuntosPorMensaje = adjuntoService.nombresPorMensaje(id);
         List<MensajeVista> mensajes = mensajeRepository.findByPqrsIdOrderByFechaAsc(id).stream()
                 .map(m -> new MensajeVista(m.getFecha(), m.getDireccion(), m.getAsunto(), m.getCuerpo(),
-                        m.isAutomatico(), m.getAutor() == null ? null : m.getAutor().getNombre()))
+                        m.isAutomatico(), m.getAutor() == null ? null : m.getAutor().getNombre(),
+                        m.getId() == null ? List.of() : adjuntosPorMensaje.getOrDefault(m.getId(), List.of())))
                 .toList();
         List<RegistroVista> bitacora = bitacoraRepository.findByPqrsIdOrderByFechaAsc(id).stream()
                 .map(r -> new RegistroVista(r.getFecha(), r.getAccion(),
@@ -122,7 +130,7 @@ public class PqrsService {
         return new DetalleCaso(pqrs, mensajes, bitacora, diasRestantes, esCriticoSinAsignar(pqrs),
                 puedeTomar, motivoRechazo.isEmpty(), motivoRechazo.orElse(null), protocolo, puedeCompletarPasos,
                 motivoNoResolver.isEmpty(), motivoNoResolver.orElse(null), resolucion,
-                motivoRechazoNota(pqrs, usuario).orElse(null));
+                motivoRechazoNota(pqrs, usuario).orElse(null), adjuntoService.tamanoMaximoLegible(pqrs.getCanal()));
     }
 
     /**
@@ -153,6 +161,16 @@ public class PqrsService {
      */
     @Transactional
     public Mensaje enviarRespuesta(Long pqrsId, String correoUsuario, String asunto, String cuerpo) {
+        return enviarRespuesta(pqrsId, correoUsuario, asunto, cuerpo, List.of());
+    }
+
+    /**
+     * Igual que la anterior, pero con adjuntos JPG, PNG o PDF (CU-02-HU-02). Los adjuntos se validan contra el tamaño
+     * máximo del canal del caso antes de guardar nada: si alguno no es válido, no se envía el mensaje.
+     */
+    @Transactional
+    public Mensaje enviarRespuesta(Long pqrsId, String correoUsuario, String asunto, String cuerpo,
+                                   List<ArchivoAdjunto> archivos) {
         if (cuerpo == null || cuerpo.isBlank()) {
             throw new ReglaNegocioException("El mensaje no puede estar vacío");
         }
@@ -161,6 +179,7 @@ public class PqrsService {
         motivoRechazoRespuesta(pqrs, usuario).ifPresent(motivo -> {
             throw new ReglaNegocioException(motivo);
         });
+        adjuntoService.validar(archivos, pqrs.getCanal());
 
         Mensaje mensaje = new Mensaje();
         mensaje.setPqrs(pqrs);
@@ -171,9 +190,10 @@ public class PqrsService {
         mensaje.setAutomatico(false);
         mensaje.setAutor(usuario);
         mensajeRepository.save(mensaje);
+        List<Adjunto> adjuntos = adjuntoService.guardar(mensaje, archivos);
 
-        canal.enviar(mensaje);
-        registrar(pqrs, usuario, TipoAccion.RESPUESTA_ENVIADA, null, null);
+        canal.enviar(mensaje, adjuntos);
+        registrar(pqrs, usuario, TipoAccion.RESPUESTA_ENVIADA, detalleAdjuntos(adjuntos), null);
         return mensaje;
     }
 
@@ -357,6 +377,15 @@ public class PqrsService {
         return pqrs.getPrioridad() == Prioridad.CRITICA
                 && pqrs.getResponsable() == null
                 && pqrs.getEstado() != EstadoPqrs.RESUELTA;
+    }
+
+    /** Lo que queda en la bitácora sobre los adjuntos de una respuesta (nulo si no tiene). */
+    private String detalleAdjuntos(List<Adjunto> adjuntos) {
+        if (adjuntos == null || adjuntos.isEmpty()) {
+            return null;
+        }
+        String texto = "Adjuntos: " + adjuntos.stream().map(Adjunto::getNombreArchivo).collect(Collectors.joining(", "));
+        return texto.length() <= LARGO_MAXIMO_MOTIVO ? texto : texto.substring(0, LARGO_MAXIMO_MOTIVO);
     }
 
     private String asuntoDeRespuesta(Pqrs pqrs, String asunto) {

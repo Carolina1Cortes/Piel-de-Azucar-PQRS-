@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,6 +24,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import co.edu.unal.apolo.dominio.Adjunto;
+import co.edu.unal.apolo.dominio.Canal;
 import co.edu.unal.apolo.dominio.CategoriaResolucion;
 import co.edu.unal.apolo.dominio.DireccionMensaje;
 import co.edu.unal.apolo.dominio.EstadoPqrs;
@@ -51,6 +55,7 @@ class PqrsServiceTest {
     @Mock private BitacoraRepository bitacoraRepository;
     @Mock private CanalMensajeria canal;
     @Mock private DiasHabilesService diasHabiles;
+    @Mock private AdjuntoService adjuntoService;
 
     private PqrsService servicio;
 
@@ -58,7 +63,7 @@ class PqrsServiceTest {
     void preparar() {
         Clock reloj = Clock.fixed(Instant.parse("2026-11-04T15:00:00Z"), ZoneId.of("UTC"));
         servicio = new PqrsService(pqrsRepository, usuarioRepository, mensajeRepository, bitacoraRepository,
-                canal, diasHabiles, reloj);
+                canal, diasHabiles, adjuntoService, reloj);
     }
 
     // ---------- consultas
@@ -284,12 +289,80 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
         assertThat(enviado.getPqrs()).isSameAs(critica);
         assertThat(enviado.getAsunto()).isEqualTo("Sobre tu reacción");
         assertThat(enviado.getCuerpo()).isEqualTo("Hola Valentina, lamentamos lo ocurrido.");
-        verify(canal).enviar(enviado);
+        verify(canal).enviar(enviado, List.of());
 
         ArgumentCaptor<RegistroBitacora> registro = ArgumentCaptor.forClass(RegistroBitacora.class);
         verify(bitacoraRepository).save(registro.capture());
         assertThat(registro.getValue().getAccion()).isEqualTo(TipoAccion.RESPUESTA_ENVIADA);
         assertThat(registro.getValue().getUsuario()).isSameAs(operador);
+    }
+
+    @Test
+    void enviaLosAdjuntosValidadosContraElCanalDelCasoYLosDejaEnLaBitacora() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        caso.setCanal(Canal.GMAIL);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+        List<ArchivoAdjunto> archivos = List.of(new ArchivoAdjunto("guia_modo_de_uso.pdf", new byte[] {'%', 'P', 'D', 'F', '-'}));
+        Adjunto guia = new Adjunto();
+        guia.setNombreArchivo("guia_modo_de_uso.pdf");
+        when(adjuntoService.guardar(any(Mensaje.class), any())).thenReturn(List.of(guia));
+
+        Mensaje enviado = servicio.enviarRespuesta(4L, CORREO_OPERADOR, "Modo de uso", "Te comparto la guía.", archivos);
+
+        verify(adjuntoService).validar(archivos, Canal.GMAIL);
+        verify(adjuntoService).guardar(enviado, archivos);
+        verify(canal).enviar(enviado, List.of(guia));
+        ArgumentCaptor<RegistroBitacora> registro = ArgumentCaptor.forClass(RegistroBitacora.class);
+        verify(bitacoraRepository).save(registro.capture());
+        assertThat(registro.getValue().getAccion()).isEqualTo(TipoAccion.RESPUESTA_ENVIADA);
+        assertThat(registro.getValue().getMotivo()).isEqualTo("Adjuntos: guia_modo_de_uso.pdf");
+    }
+
+    @Test
+    void siUnAdjuntoNoEsValidoNoSeGuardaNiSeEnviaElMensaje() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.MEDIA, EstadoPqrs.EN_ATENCION, operador);
+        caso.setCanal(Canal.GMAIL);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+        List<ArchivoAdjunto> archivos = List.of(new ArchivoAdjunto("ficha.pdf", new byte[] {'%', 'P', 'D', 'F', '-'}));
+        doThrow(new ReglaNegocioException("El archivo ficha.pdf pesa 12 MB y el máximo para Gmail es 10 MB"))
+                .when(adjuntoService).validar(archivos, Canal.GMAIL);
+
+        assertThatThrownBy(() -> servicio.enviarRespuesta(4L, CORREO_OPERADOR, null, "Hola", archivos))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("máximo para Gmail");
+        verify(mensajeRepository, never()).save(any());
+        verify(adjuntoService, never()).guardar(any(), any());
+        verifyNoInteractions(canal);
+        verify(bitacoraRepository, never()).save(any());
+    }
+
+    @Test
+    void elDetalleMuestraLosAdjuntosDeCadaMensajeYElMaximoDelCanal() {
+        Usuario operador = usuario(2L, Rol.OPERADOR, false);
+        Pqrs caso = pqrs(4L, Prioridad.ALTA, EstadoPqrs.EN_ATENCION, operador);
+        caso.setCanal(Canal.GMAIL);
+        Mensaje entrante = new Mensaje();
+        entrante.setId(20L);
+        entrante.setPqrs(caso);
+        entrante.setFecha(LocalDateTime.of(2026, 11, 3, 10, 0));
+        entrante.setCuerpo("Adjunto una foto.");
+        entrante.setDireccion(DireccionMensaje.ENTRANTE);
+        when(pqrsRepository.findByIdConDetalle(4L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo(CORREO_OPERADOR)).thenReturn(Optional.of(operador));
+        when(mensajeRepository.findByPqrsIdOrderByFechaAsc(4L)).thenReturn(List.of(entrante));
+        when(adjuntoService.nombresPorMensaje(4L)).thenReturn(java.util.Map.of(20L, List.of("foto.jpg")));
+        when(adjuntoService.tamanoMaximoLegible(Canal.GMAIL)).thenReturn("10 MB");
+
+        DetalleCaso detalle = servicio.detalle(4L, CORREO_OPERADOR);
+
+        assertThat(detalle.mensajes()).singleElement()
+                .extracting(DetalleCaso.MensajeVista::adjuntos)
+                .isEqualTo(List.of("foto.jpg"));
+        assertThat(detalle.tamanoMaximoAdjuntos()).isEqualTo("10 MB");
     }
 
     @Test
@@ -342,7 +415,7 @@ void tomarCasoNoCriticoLoPasaAEnAtencion() {
 
         servicio.enviarRespuesta(4L, "paula@pieldeazucar.co", "A", "Hola");
 
-        verify(canal).enviar(any(Mensaje.class));
+        verify(canal).enviar(any(Mensaje.class), anyList());
     }
 
     @Test
