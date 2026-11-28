@@ -10,4 +10,10 @@ public interface PlantillaRespuestaRepository extends JpaRepository<PlantillaRes
     List<PlantillaRespuesta> findByActivaTrue();
 
     List<PlantillaRespuesta> findByTipoConsultaId(Long tipoConsultaId);
+    
+    List<PlantillaRespuesta> findAllByOrderByNombreAsc();
+
+    boolean existsByNombreIgnoreCase(String nombre);
+
+    boolean existsByNombreIgnoreCaseAndIdNot(String nombre, Long id);
 }
