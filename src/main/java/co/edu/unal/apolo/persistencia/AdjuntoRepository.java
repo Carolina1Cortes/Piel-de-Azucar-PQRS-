@@ -10,4 +10,7 @@ public interface AdjuntoRepository extends JpaRepository<Adjunto, Long> {
     List<Adjunto> findByMensajeId(Long mensajeId);
 
     List<Adjunto> findByPlantillaId(Long plantillaId);
+
+    /** Todos los adjuntos de los mensajes de un caso, en una sola consulta. */
+    List<Adjunto> findByMensajePqrsId(Long pqrsId);
 }
